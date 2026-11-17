@@ -101,6 +101,24 @@
             "description": "Isi 1 untuk response ringkas (group & experience dipotong, raw search/avatar detailed dihilangkan). Default: lengkap."
           }
         ]
+      },
+      {
+        "name": "Telegram Profile Stalker",
+        "endpoint": "/api/stalker/telegram-profile",
+        "filename": "telegramProfile",
+        "method": "GET",
+        "params": [
+          {
+            "name": "username",
+            "required": true,
+            "description": "Username Telegram tanpa @ atau URL lengkap (contoh: turzzxroot908 atau https://t.me/turzzxroot908). Untuk user: nama, avatar, deep link. Untuk channel/group: ditambah bio, subscriber, online, dan postingan terbaru beserta views."
+          },
+          {
+            "name": "compact",
+            "required": false,
+            "description": "Isi 1 untuk response ringkas (postingan dibatasi 10, raw HTML dihilangkan). Default: lengkap."
+          }
+        ]
       }
     ],
     "maker": [
