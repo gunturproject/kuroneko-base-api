@@ -63,10 +63,12 @@
             "description": "Isi 1 untuk mengambil link kualitas HD (jika tersedia)"
           }
         ]
-      },
+      }
+    ],
+    "stalker": [
       {
         "name": "TikTok Profile Stalker",
-        "endpoint": "/api/download/tiktok-profile",
+        "endpoint": "/api/stalker/tiktok-profile",
         "filename": "tiktokProfile",
         "method": "GET",
         "params": [
@@ -84,7 +86,7 @@
       },
       {
         "name": "Roblox Profile Stalker",
-        "endpoint": "/api/download/roblox-profile",
+        "endpoint": "/api/stalker/roblox-profile",
         "filename": "robloxProfile",
         "method": "GET",
         "params": [
