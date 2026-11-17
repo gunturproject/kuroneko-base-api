@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import axios from 'axios';
 import sharp from 'sharp';
 
 /*
- * Fetch a photo from Catbox, upscale + sharpen it on the server with
- * Lanczos3 resampling, then upload the result back to Catbox and return the
- * new shareable URL. Exposed as a normal KuroNeko endpoint in /docs.
+ * Fetch a photo from Catbox, upscale + sharpen it on the server with Lanczos3
+ * resampling, then stream the resulting image straight back in the response.
+ * No re-upload: Catbox blocks uploads from datacenter IPs (Vercel), so the
+ * endpoint returns the image bytes directly with descriptive metadata headers.
  */
 
 const ALLOWED_HOSTS = new Set(['files.catbox.moe', 'litterbox.catbox.moe']);
@@ -84,19 +84,36 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
         : 0.6;
 
     try {
-        const response = await axios.get<ArrayBuffer>(target.toString(), {
-            responseType: 'arraybuffer',
-            timeout: 30000,
-            maxContentLength: MAX_SOURCE_BYTES,
-            maxBodyLength: MAX_SOURCE_BYTES,
+        const response = await fetch(target.toString(), {
+            signal: AbortSignal.timeout(30000),
             headers: { 'User-Agent': 'KuroNeko-Image-Upscaler/1.0' }
         });
 
-        const source = Buffer.from(response.data);
+        if (!response.ok) {
+            if (response.status === 404) {
+                return res.status(404).json({
+                    status: false,
+                    message: 'Gambar tidak ditemukan di Catbox. Cek link-nya.'
+                });
+            }
+            return res.status(502).json({
+                status: false,
+                message: `Gagal mengambil gambar dari Catbox (HTTP ${response.status}).`
+            });
+        }
+
+        const source = Buffer.from(await response.arrayBuffer());
         if (!source.length) {
             return res.status(404).json({
                 status: false,
                 message: 'Gambar tidak ditemukan di Catbox.'
+            });
+        }
+
+        if (source.length > MAX_SOURCE_BYTES) {
+            return res.status(413).json({
+                status: false,
+                message: 'Gambar sumber terlalu besar (maks 12 MB).'
             });
         }
 
@@ -110,20 +127,17 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
 
         let width = Math.round(metadata.width * scale);
         let height = Math.round(metadata.height * scale);
-        let clamped = false;
 
         if (width * height > MAX_PIXELS) {
             const factor = Math.sqrt(MAX_PIXELS / (width * height));
             width = Math.round(width * factor);
             height = Math.round(height * factor);
-            clamped = true;
         }
 
         if (Math.max(width, height) > MAX_EDGE) {
             const factor = MAX_EDGE / Math.max(width, height);
             width = Math.round(width * factor);
             height = Math.round(height * factor);
-            clamped = true;
         }
 
         const pipeline = sharp(source, { limitInputPixels: 268402689 })
@@ -143,67 +157,31 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
             output = await pipeline.webp({ quality: 90 }).toBuffer();
         }
 
-        const form = new FormData();
-        form.append('reqtype', 'fileupload');
-        form.append('time', '72h');
-        form.append('fileToUpload', new Blob([output], { type: mime }), `kuroneko-upscale-${Date.now()}.${EXT[format]}`);
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Content-Length', String(output.length));
+        res.setHeader('Content-Disposition', `inline; filename="kuroneko-upscale-${Date.now()}.${EXT[format]}"`);
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('X-Original-Width', String(metadata.width));
+        res.setHeader('X-Original-Height', String(metadata.height));
+        res.setHeader('X-Output-Width', String(width));
+        res.setHeader('X-Output-Height', String(height));
+        res.setHeader('X-Output-Format', EXT[format]);
 
-        const uploaded = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-            method: 'POST',
-            body: form,
-            signal: AbortSignal.timeout(60000)
-        });
-
-        if (!uploaded.ok) {
-            const body = await uploaded.text().catch(function () { return ''; });
-            throw new Error(`Catbox upload HTTP ${uploaded.status}: ${body.slice(0, 200)}`);
-        }
-
-        const result = (await uploaded.text()).trim();
-        if (!/^https:\/\/(files|litter|litterbox)\.catbox\.moe\/\S+$/.test(result)) {
-            return res.status(502).json({
-                status: false,
-                message: 'Catbox mengembalikan respons yang tidak dikenali.'
-            });
-        }
-
-        return res.json({
-            status: true,
-            result,
-            width,
-            height,
-            format: EXT[format],
-            bytes: output.length,
-            ...(clamped ? { note: 'Resolusi dibatasi supaya proses tetap stabil.' } : {})
-        });
+        return res.send(output);
     } catch (error) {
         const message = error instanceof Error ? error.message : '';
 
-        if (message.includes('maxContentLength') || message.includes('maxBodyLength')) {
-            return res.status(413).json({
+        if (message.includes('timeout') || message.includes('aborted')) {
+            return res.status(504).json({
                 status: false,
-                message: 'Gambar sumber terlalu besar (maks 12 MB).'
+                message: 'Catbox terlalu lama merespons. Coba lagi.'
             });
-        }
-
-        if (axios.isAxiosError(error)) {
-            if (error.response?.status === 404) {
-                return res.status(404).json({
-                    status: false,
-                    message: 'Gambar tidak ditemukan di Catbox. Cek link-nya.'
-                });
-            }
-            if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-                return res.status(504).json({
-                    status: false,
-                    message: 'Catbox terlalu lama merespons. Coba lagi.'
-                });
-            }
         }
 
         return res.status(502).json({
             status: false,
-            message: 'Gagal meng-upscale atau meng-upload gambar ke Catbox.',
+            message: 'Gagal meng-upscale gambar.',
             detail: message || String(error)
         });
     }

@@ -150,7 +150,7 @@
           {
             "name": "scale",
             "required": false,
-            "description": "Skala pembesaran 1-8 (default 2, maks 34 MP / 8192px)"
+            "description": "Skala pembesaran 1-8 (default 2, maks 34 MP / 8192px). Mengembalikan file gambar hasil langsung."
           },
           {
             "name": "format",
