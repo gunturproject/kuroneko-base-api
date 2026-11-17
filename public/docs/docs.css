@@ -108,3 +108,35 @@
   .search-field{margin-top:0!important}
   .search-field input{padding-right:12px!important}
 }
+
+/* Compact mobile header lockup: title + badge share the first row, the
+   DOCUMENTATION caption sits quietly underneath instead of three tall lines. */
+@media (max-width:767px){
+  .header-inner{gap:10px}
+  .brand>.min-w-0{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    grid-template-areas:"title badge" "sub sub";
+    align-items:center;
+    column-gap:10px;
+    row-gap:2px;
+  }
+  .brand-title{grid-area:title;font-size:17px;line-height:1.1}
+  .brand-badge{
+    grid-area:badge;justify-self:start;margin:0;
+    min-height:19px;padding:2px 7px;font-size:8px;letter-spacing:.06em;
+  }
+  .brand-sub{grid-area:sub;margin:0;font-size:9px;letter-spacing:.14em;line-height:1.2}
+}
+
+/* Soften the divider: a hard 1px rule reads as stiff, so fade it out at both
+   edges with a gentle violet tint instead. */
+.site-header{border-bottom:0!important;box-shadow:none!important}
+.site-header::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgb(167 139 250 / .38) 22%,rgb(167 139 250 / .38) 78%,transparent);
+  pointer-events:none;
+}
