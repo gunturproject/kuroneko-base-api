@@ -3,6 +3,39 @@
    background, so a slow lambda can never block first paint. */
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+function resolveAssetUrl(value){
+    try{
+        return new URL(value||'',window.location.origin).href;
+    }catch{
+        return value||'';
+    }
+}
+
+function playThumbVideo(video){
+    let started=video.play();
+
+    if(started&&started.catch){
+        started.catch(()=>{
+            video.muted=true;
+            let fallback=video.play();
+            if(fallback&&fallback.catch) fallback.catch(()=>{});
+
+            const unmute=()=>{
+                document.removeEventListener('pointerdown',unmute);
+                document.removeEventListener('touchstart',unmute);
+                document.removeEventListener('keydown',unmute);
+                video.muted=false;
+                const resumed=video.play();
+                if(resumed&&resumed.catch) resumed.catch(()=>{});
+            };
+
+            document.addEventListener('pointerdown',unmute,{once:true,passive:true});
+            document.addEventListener('touchstart',unmute,{once:true,passive:true});
+            document.addEventListener('keydown',unmute,{once:true});
+        });
+    }
+}
+
 function share(){
     if(navigator.share){
         navigator.share({title:document.title,url:window.location.href}).catch(()=>{});
@@ -79,6 +112,9 @@ document.getElementById('loader').classList.add('hidden');
 document.getElementById('content').classList.remove('hidden');
 initReveal();
 
+const initialThumb=document.getElementById('dash-thumb');
+if(initialThumb&&initialThumb.tagName==='VIDEO') playThumbVideo(initialThumb);
+
 /* Progressive enhancement: fill in live config whenever it arrives. */
 fetch('/config')
     .then(res=>res.ok ? res.json() : null)
@@ -110,9 +146,17 @@ fetch('/config')
         }
 
         const thumbEl=document.getElementById('dash-thumb');
-        if(thumbEl && s.thumbnail && thumbEl.src!==s.thumbnail){
-            thumbEl.onerror=()=>{ thumbEl.onerror=null; };
-            thumbEl.src=s.thumbnail;
+        if(thumbEl && s.thumbnail){
+            const next=resolveAssetUrl(s.thumbnail);
+            const cur=resolveAssetUrl(thumbEl.getAttribute('src')||'');
+            if(cur!==next){
+                thumbEl.onerror=()=>{ thumbEl.onerror=null; };
+                thumbEl.src=s.thumbnail;
+                if(thumbEl.tagName==='VIDEO'){
+                    thumbEl.load();
+                    playThumbVideo(thumbEl);
+                }
+            }
         }
 
         const headerLogo=document.getElementById('header-logo');
