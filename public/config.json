@@ -144,8 +144,13 @@
         "params": [
           {
             "name": "script",
-            "required": true,
-            "description": "Kode Lua/Luau yang akan di-obfuscasi (JSON body: { \"script\": \"...\" }, maks 30 MB)"
+            "required": false,
+            "description": "Kode Lua/Luau langsung (JSON body). Praktis sampai ~4,5 MB di Vercel; lebih besar pakai 'url'."
+          },
+          {
+            "name": "url",
+            "required": false,
+            "description": "Alternatif untuk script besar: URL HTTPS file script di files.catbox.moe / litterbox.catbox.moe, maks 30 MB. Upload dulu dari client/server-mu, lalu kirim URL-nya."
           }
         ]
       },
