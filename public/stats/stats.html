@@ -7,9 +7,11 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/open-glass-ui.css">
+<link rel="stylesheet" href="/assets/glass-theme.css">
 <link rel="stylesheet" href="/stats/stats.css">
 </head>
-<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+<body class="min-h-screen flex flex-col relative overflow-x-hidden" data-ogui-design="liquid" data-ogui-appearance="dark">
 
 <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
 <div class="blob w-[420px] h-[420px] bg-purple-300/25 top-[-8%] left-[10%]"></div>
@@ -19,10 +21,10 @@
 <nav class="sticky top-0 z-[60] w-full">
 <div class="max-w-7xl mx-auto px-5 h-20 flex items-center gap-4 justify-between">
 <div class="flex items-center gap-3 shrink-0">
-<a href="/" class="clay-icon-btn"><i class="fa-solid fa-arrow-left text-sm"></i></a>
+<a href="/" class="clay-icon-btn ogui-button ogui-control--medium ogui-icon-button"><i class="fa-solid fa-arrow-left text-sm"></i></a>
 <h1 class="font-black text-lg tracking-tight uppercase" style="color:#1E1B4B">System Status</h1>
 </div>
-<a href="/docs" class="clay-link">DOCS</a>
+<a href="/docs" class="clay-link ogui-button ogui-control--medium">DOCS</a>
 </div>
 </nav>
 
@@ -49,8 +51,8 @@
 </div>
 </div>
 <div class="flex gap-2 text-[10px] font-bold">
-<span id="arch" class="px-2 py-1 rounded-lg" style="background:#EFF6FF;color:#1D4ED8">--</span>
-<span id="node-ver" class="px-2 py-1 rounded-lg" style="background:#F5F3FF;color:#6D28D9">--</span>
+<span id="arch" class="ogui-badge glass-chip px-2 py-1 rounded-lg">--</span>
+<span id="node-ver" class="ogui-badge glass-chip px-2 py-1 rounded-lg">--</span>
 </div>
 </div>
 

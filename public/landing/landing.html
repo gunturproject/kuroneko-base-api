@@ -7,9 +7,11 @@
 <link id="favicon" rel="icon" href="">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/open-glass-ui.css">
+<link rel="stylesheet" href="/assets/glass-theme.css">
 <link rel="stylesheet" href="/landing/landing.css">
 </head>
-<body class="antialiased">
+<body class="antialiased" data-ogui-design="liquid" data-ogui-appearance="dark">
 
 <div class="bg-blobs" aria-hidden="true">
 <div class="blob blob-a"></div>
@@ -21,7 +23,7 @@
 
 <header id="site-header" class="site-header">
 <div class="header-inner">
-<button id="menu-toggle" class="icon-btn" aria-label="Buka menu" aria-expanded="false" aria-controls="sidebar">
+<button id="menu-toggle" class="icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="Buka menu" aria-expanded="false" aria-controls="sidebar">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
 </button>
 <div class="header-brand">
@@ -29,13 +31,13 @@
 <span id="header-name" class="header-name">KuroNeko</span>
 </div>
 <div class="header-actions">
-<a id="btn-channel" href="#" target="_blank" rel="noopener" class="icon-btn" aria-label="WhatsApp Channel">
+<a id="btn-channel" href="#" target="_blank" rel="noopener" class="icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="WhatsApp Channel">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 01-8.5 8.5c-1.35 0-2.6-.32-3.7-.9L4 20l1-4.6A8.46 8.46 0 013.5 11.5 8.5 8.5 0 0112 3a8.5 8.5 0 019 8.5z"/></svg>
 </a>
-<a id="btn-source" href="#" target="_blank" rel="noopener" class="icon-btn" aria-label="Source Code">
+<a id="btn-source" href="#" target="_blank" rel="noopener" class="icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="Source Code">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></svg>
 </a>
-<button onclick="share()" class="icon-btn" aria-label="Bagikan">
+<button onclick="share()" class="icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="Bagikan">
 <svg id="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 14v5a2 2 0 002 2h12a2 2 0 002-2v-5"/></svg>
 </button>
 </div>
@@ -50,7 +52,7 @@
 <img id="sidebar-logo" alt="" class="header-logo hidden">
 <span id="sidebar-name" class="header-name">KuroNeko</span>
 </div>
-<button id="sidebar-close" class="icon-btn" aria-label="Tutup menu">
+<button id="sidebar-close" class="icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="Tutup menu">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
 </button>
 </div>

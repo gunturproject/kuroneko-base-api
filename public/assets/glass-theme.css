@@ -1,0 +1,199 @@
+/*
+ * KuroNeko — shared OpenGlass UI theme layer.
+ * Uses the CSS-first design system from:
+ *   https://github.com/moekoelueker/open-glass-ui  (MIT, see LICENSE.open-glass-ui.txt)
+ * Load AFTER open-glass-ui.css, BEFORE the per-page stylesheet.
+ */
+
+:root {
+    color-scheme: dark;
+
+    --ogui-color-accent: #a78bfa;
+    --ogui-color-accent-ink: #180d33;
+    --ogui-color-focus: #d8ccff;
+    --ogui-color-text: #f7f6ff;
+    --ogui-color-muted: #c3bce0;
+    --ogui-color-border: rgb(255 255 255 / 0.18);
+    --ogui-color-control: rgb(255 255 255 / 0.08);
+    --ogui-color-control-hover: rgb(255 255 255 / 0.14);
+    --ogui-radius-surface: 1.35rem;
+    --ogui-radius-control: 0.85rem;
+
+    --ogui-glass-blur: 1.15;
+    --ogui-glass-opacity: 1;
+    --ogui-glass-saturation: 1.15;
+    --ogui-glass-rim: 1.15;
+    --ogui-glass-light-angle: 330deg;
+
+    --glass-ink: #f7f6ff;
+    --glass-muted: #beb6dd;
+    --glass-line: rgb(255 255 255 / 0.14);
+    --glass-fill: rgb(255 255 255 / 0.09);
+    --glass-fill-strong: rgb(255 255 255 / 0.14);
+    --glass-shadow: 0 18px 50px -18px rgb(4 2 20 / 0.75);
+    --glass-inset: inset 0 1px 0 rgb(255 255 255 / 0.22);
+}
+
+* { box-sizing: border-box; }
+
+html { background: #0b0918; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--glass-ink);
+    font-family: 'Inter', 'Nunito', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background:
+        radial-gradient(120% 90% at 12% 8%, rgb(124 58 237 / 0.3), transparent 58%),
+        radial-gradient(110% 90% at 92% 18%, rgb(14 165 233 / 0.18), transparent 55%),
+        radial-gradient(120% 100% at 60% 100%, rgb(236 72 153 / 0.18), transparent 60%),
+        linear-gradient(160deg, #0c0a1c 0%, #100c26 48%, #080716 100%);
+    background-attachment: fixed;
+}
+
+.font-mono,
+pre,
+code,
+[id$="-time"],
+[id$="-date"] { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+a { color: inherit; }
+
+button, input { font: inherit; }
+
+/* ---------------------------------------------------------------- wallpaper */
+.bg-blobs,
+.blob-wall {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+        radial-gradient(120% 90% at 12% 8%, rgb(124 58 237 / 0.34), transparent 58%),
+        radial-gradient(110% 90% at 92% 18%, rgb(14 165 233 / 0.22), transparent 55%),
+        radial-gradient(120% 100% at 60% 100%, rgb(236 72 153 / 0.2), transparent 60%),
+        linear-gradient(160deg, #0c0a1c 0%, #100c26 48%, #080716 100%);
+}
+
+.blob {
+    position: absolute;
+    border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
+    filter: blur(70px);
+    opacity: 0.5;
+    animation: glass-drift 18s ease-in-out infinite alternate;
+}
+
+.blob-a { width: 34vw; height: 34vw; min-width: 300px; min-height: 300px; background: #8b5cf6; top: -12%; left: -8%; }
+.blob-b { width: 30vw; height: 30vw; min-width: 260px; min-height: 260px; background: #22d3ee; top: 16%; right: -10%; animation-delay: -6s; }
+.blob-c { width: 36vw; height: 36vw; min-width: 320px; min-height: 320px; background: #f472b6; bottom: -18%; left: 18%; animation-delay: -12s; }
+
+@keyframes glass-drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(4vw, 3vh, 0) scale(1.14); }
+}
+
+/* ------------------------------------------------------------- glass pieces */
+.glass-surface {
+    position: relative;
+    border: 1px solid var(--glass-line);
+    border-radius: var(--ogui-radius-surface);
+    background:
+        linear-gradient(145deg, rgb(255 255 255 / 0.13), transparent 42%),
+        var(--glass-fill);
+    box-shadow: var(--glass-inset), var(--glass-shadow);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+}
+
+.glass-surface::before {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    width: 46%;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.75), transparent);
+    content: '';
+    pointer-events: none;
+}
+
+.glass-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--glass-line);
+    border-radius: 999px;
+    background: var(--glass-fill);
+    color: var(--glass-ink);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.glass-input {
+    width: 100%;
+    border: 1px solid var(--glass-line);
+    border-radius: var(--ogui-radius-control);
+    padding: 0.75rem 1rem;
+    color: var(--glass-ink);
+    background: rgb(10 8 26 / 0.38);
+    outline: none;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.glass-input::placeholder { color: rgb(199 192 224 / 0.65); }
+.glass-input:focus {
+    border-color: rgb(167 139 250 / 0.75);
+    box-shadow: 0 0 0 3px rgb(167 139 250 / 0.18);
+    background: rgb(10 8 26 / 0.55);
+}
+
+/* ------------------------------------------------------------------ reveal */
+.reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.55s cubic-bezier(0.34, 1.4, 0.64, 1), transform 0.55s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+.clay-shimmer {
+    border-radius: 1rem;
+    background: linear-gradient(100deg, rgb(255 255 255 / 0.06) 25%, rgb(255 255 255 / 0.15) 45%, rgb(255 255 255 / 0.06) 65%);
+    background-size: 200% 100%;
+    animation: glass-shine 1.3s linear infinite;
+}
+
+@keyframes glass-shine { to { background-position: -200% 0; } }
+
+/* ---------------------------------------------------------------- scrollbar */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(167 139 250 / 0.42); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(167 139 250 / 0.65); }
+
+::selection { background: rgb(167 139 250 / 0.4); color: #fff; }
+
+/* ------------------------------------------------------------- a11y states */
+@media (prefers-reduced-motion: reduce) {
+    .blob { animation: none; }
+    .clay-shimmer { animation: none; }
+    .reveal { transition: none; opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .glass-surface, .glass-chip, .glass-input {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        background: #171332;
+    }
+}
+
+@media (forced-colors: active) {
+    .glass-surface, .glass-chip, .glass-input { border: 1px solid CanvasText; background: Canvas; }
+}
