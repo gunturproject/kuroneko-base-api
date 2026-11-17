@@ -179,6 +179,26 @@ button, input { font: inherit; }
 
 ::selection { background: rgb(167 139 250 / 0.4); color: #fff; }
 
+/* ---------------------------------------------------- legacy colour repair */
+/* A few inline colours and Tailwind text utilities come from the original
+   light theme. Remap them so nothing disappears on the dark glass surface. */
+[style*="color:#1E1B4B"], [style*="color: #1E1B4B"] { color: var(--glass-ink) !important; }
+[style*="color:#475569"], [style*="color: #475569"],
+[style*="color:#64748B"], [style*="color: #64748B"],
+[style*="color:#94A3B8"], [style*="color: #94A3B8"] { color: #cfd6e8 !important; }
+[style*="color:#6D28D9"], [style*="color: #6D28D9"] { color: #c4b5fd !important; }
+[style*="color:#B91C1C"], [style*="color: #B91C1C"] { color: #fda4af !important; }
+[style*="color:#78350F"], [style*="color: #78350F"] { color: #fde68a !important; }
+[style*="border-color:#F1F5F9"], [style*="border-color: #F1F5F9"] { border-color: var(--glass-line) !important; }
+[style*="background:#EDE9FE"], [style*="background: #EDE9FE"] { background: rgb(255 255 255 / 0.12) !important; }
+
+/* Tailwind utility classes used by generated markup, remapped for dark glass. */
+.text-slate-600 { color: #cfd6e8 !important; }
+.text-slate-500 { color: #bcc5da !important; }
+.text-slate-400 { color: #aeb8d0 !important; }
+.text-slate-300 { color: #dde4f2 !important; }
+.text-slate-200 { color: #e8edf7 !important; }
+
 /* ------------------------------------------------------------- a11y states */
 @media (prefers-reduced-motion: reduce) {
     .blob { animation: none; }
