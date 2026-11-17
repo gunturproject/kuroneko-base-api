@@ -1,7 +1,7 @@
-/* Keep the skeleton brief — long artificial delays make the UI feel slow. */
-const minLoadTime=200;
-const startLoad=Date.now();
-const prefersReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* KuroNeko Landing — instant paint.
+   Content is revealed synchronously; /config only enriches it in the
+   background, so a slow lambda can never block first paint. */
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function share(){
     if(navigator.share){
@@ -18,18 +18,17 @@ function share(){
 function initReveal(){
     const items=document.querySelectorAll('.reveal');
 
-    if(prefersReducedMotion){
+    if(prefersReducedMotion || !('IntersectionObserver' in window)){
         items.forEach(el=>el.classList.add('in'));
         return;
     }
 
     const observer=new IntersectionObserver((entries)=>{
-        entries.forEach((entry,index)=>{
-            if(entry.isIntersecting){
-                setTimeout(()=>entry.target.classList.add('in'),index*90);
-                observer.unobserve(entry.target);
-            }
-        });
+        for(const entry of entries){
+            if(!entry.isIntersecting) continue;
+            entry.target.classList.add('in');
+            observer.unobserve(entry.target);
+        }
     },{threshold:.1});
 
     items.forEach(el=>observer.observe(el));
@@ -54,73 +53,55 @@ function closeSidebar(){
 document.getElementById('menu-toggle').addEventListener('click',openSidebar);
 document.getElementById('sidebar-close').addEventListener('click',closeSidebar);
 document.getElementById('sidebar-overlay').addEventListener('click',closeSidebar);
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeSidebar(); });
 
-document.addEventListener('keydown',(e)=>{
-    if(e.key==='Escape')closeSidebar();
-});
+/* Reveal immediately — no API gate, no artificial timer. */
+document.getElementById('loader').classList.add('hidden');
+document.getElementById('content').classList.remove('hidden');
+initReveal();
 
+/* Progressive enhancement: fill in live config whenever it arrives. */
 fetch('/config')
-    .then(res=>res.json())
+    .then(res=>res.ok ? res.json() : null)
     .then(config=>{
-        const name=config.settings.apiName;
-        const desc=config.settings.description;
+        if(!config?.settings) return;
+        const s=config.settings;
 
-        document.getElementById('dash-title').innerText=name;
-        document.getElementById('dash-desc').innerText=desc;
-        document.getElementById('header-name').innerText=name;
-        document.getElementById('sidebar-name').innerText=name;
+        const setText=(id,value)=>{
+            if(value==null) return;
+            const node=document.getElementById(id);
+            if(node && node.textContent!==value) node.textContent=value;
+        };
+
+        setText('dash-title',s.apiName);
+        setText('dash-desc',s.description);
+        setText('header-name',s.apiName);
+        setText('sidebar-name',s.apiName);
 
         const btnChannel=document.getElementById('btn-channel');
-
-        if(config.settings.channelUrl){
-            btnChannel.href=config.settings.channelUrl;
-        }else{
-            btnChannel.style.display='none';
+        if(btnChannel){
+            if(s.channelUrl) btnChannel.href=s.channelUrl;
+            else btnChannel.style.display='none';
         }
 
         const btnSource=document.getElementById('btn-source');
-
-        if(config.settings.github){
-            btnSource.href=config.settings.github;
-        }else{
-            btnSource.style.display='none';
+        if(btnSource){
+            if(s.github) btnSource.href=s.github;
+            else btnSource.style.display='none';
         }
 
         const thumbEl=document.getElementById('dash-thumb');
-        thumbEl.src=config.settings.thumbnail;
-        thumbEl.onerror=()=>{
-            thumbEl.src='https://placehold.co/600x400/F3EEFE/7C4DFF?text=API';
-        };
+        if(thumbEl && s.thumbnail && thumbEl.src!==s.thumbnail){
+            thumbEl.onerror=()=>{ thumbEl.onerror=null; };
+            thumbEl.src=s.thumbnail;
+        }
 
         const headerLogo=document.getElementById('header-logo');
         const sidebarLogo=document.getElementById('sidebar-logo');
-
-        if(config.settings.favicon){
-            document.getElementById('favicon').href=config.settings.favicon;
-            headerLogo.src=config.settings.favicon;
-            sidebarLogo.src=config.settings.favicon;
-            headerLogo.classList.remove('hidden');
-            sidebarLogo.classList.remove('hidden');
+        if(s.favicon){
+            document.getElementById('favicon').href=s.favicon;
+            if(headerLogo) headerLogo.src=s.favicon;
+            if(sidebarLogo) sidebarLogo.src=s.favicon;
         }
-
-        const elapsed=Date.now()-startLoad;
-        const remaining=Math.max(0,minLoadTime-elapsed);
-
-        setTimeout(()=>{
-            document.getElementById('loader').classList.add('hidden');
-            document.getElementById('content').classList.remove('hidden');
-            initReveal();
-        },remaining);
     })
-    .catch(()=>{
-        document.getElementById('dash-title').innerText='KuroNeko';
-        document.getElementById('dash-desc').innerText='Simple Dashboard Template';
-        document.getElementById('header-name').innerText='KuroNeko';
-        document.getElementById('sidebar-name').innerText='KuroNeko';
-
-        setTimeout(()=>{
-            document.getElementById('loader').classList.add('hidden');
-            document.getElementById('content').classList.remove('hidden');
-            initReveal();
-        },1000);
-    });
+    .catch(()=>{ /* defaults in HTML already cover this */ });

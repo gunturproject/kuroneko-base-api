@@ -102,6 +102,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 const staticOptions: ServeStaticOptions = {
     etag: true,
     lastModified: true,
+    // Avoid the extra 301 round-trip when /docs or /stats is requested
+    // without a trailing slash — let the explicit app.get() routes handle it.
+    redirect: false,
     maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
     setHeaders: (res, filePath) => {
         if (/\.(?:css|js|mjs|woff2?|png|jpe?g|gif|svg|webp|ico)$/.test(filePath)) {

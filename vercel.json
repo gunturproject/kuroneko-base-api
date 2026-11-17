@@ -10,9 +10,37 @@
           "public/**"
         ]
       }
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/src/(.*)",
+      "dest": "index.ts"
+    },
+    {
+      "src": "/",
+      "dest": "/public/landing/landing.html"
+    },
+    {
+      "src": "/docs/?",
+      "dest": "/public/docs/docs.html"
+    },
+    {
+      "src": "/stats/?",
+      "dest": "/public/stats/stats.html"
+    },
+    {
+      "src": "/404.html",
+      "dest": "/public/404.html"
+    },
+    {
+      "src": "/(.*\\.(?:css|js|mjs|json|jpg|jpeg|png|gif|svg|webp|ico|woff2?|ttf|map))",
+      "dest": "/public/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "index.ts"
