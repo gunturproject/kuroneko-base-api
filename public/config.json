@@ -135,6 +135,34 @@
             "description": "Custom Alias"
           }
         ]
+      },
+      {
+        "name": "Catbox Image Upscaler",
+        "endpoint": "/api/tools/catbox-upscale",
+        "filename": "catboxUpscale",
+        "method": "GET",
+        "params": [
+          {
+            "name": "url",
+            "required": true,
+            "description": "Link gambar Catbox (files.catbox.moe)"
+          },
+          {
+            "name": "scale",
+            "required": false,
+            "description": "Skala pembesaran 1-8 (default 2, maks 34 MP / 8192px)"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "description": "Format output: webp (default), jpeg, atau png"
+          },
+          {
+            "name": "detail",
+            "required": false,
+            "description": "Tingkat ketajaman 0-1 (default 0.6)"
+          }
+        ]
       }
     ]
   }

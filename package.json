@@ -16,6 +16,7 @@
     "pm2": "pm2 start index.ts --name kuroneko --interpreter node --node-args=\"-r ts-node/register\" && pm2 save"
   },
   "dependencies": {
+    "@img/sharp-wasm32": "^0.35.5",
     "@upstash/redis": "^1.38.3",
     "axios": "^1.21.1",
     "axios-cookiejar-support": "^5.0.0",
@@ -26,6 +27,7 @@
     "dotenv": "^17.4.2",
     "express": "^4.22.3",
     "form-data": "^4.0.6",
+    "sharp": "^0.35.5",
     "tough-cookie": "^4.1.4"
   },
   "devDependencies": {
