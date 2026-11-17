@@ -249,10 +249,11 @@ code,pre,.intro-code,.resp-code,.ep-url,.status-table{
 }
 
 /* ============================================================
-   TOMBOL POLOS — home, github, chat, kode, share
-   Tanpa panel OpenGlass / liquid di belakangnya.
-   Atribut data-ogui-* sengaja tetap dipertahankan (hook JS).
+   TOMBOL AKSI — openglass backing dihapus, bentuk tombol tetap ada
+   (mirip tombol garis-3: kotak bersih + ikon, BUKAN transparan semua)
    ============================================================ */
+
+/* Panel kaca yang jadi backing kumpulan tombol dibuang */
 .header-actions.ogui-toolbar{
   background:transparent!important;
   border:0!important;
@@ -263,68 +264,39 @@ code,pre,.intro-code,.resp-code,.ep-url,.status-table{
   backdrop-filter:none!important;
 }
 .header-actions.ogui-toolbar::before,
-.header-actions.ogui-toolbar::after,
-#btn-channel::before,
-#menu-toggle::before,#menu-toggle::after,
-#btn-channel::after,
+.header-actions.ogui-toolbar::after{
+  content:none!important;
+  display:none!important;
+}
+
+/* Tiap tombol: buang LAPISAN KACAnya (blur + shadow + gradient),
+   TAPI border, background solid, radius, dan ikon tetap dipertahankan.
+   #menu-toggle (garis 3) sengaja TIDAK disentuh — dia acuan bentuknya. */
+#btn-channel,
+#btn-source,
+button[onclick="share()"],
+a[aria-label="Kembali ke Beranda"],
+a[aria-label="Source Code"]{
+  background:var(--ogui-control)!important;
+  border:1px solid var(--ogui-hairline)!important;
+  border-radius:var(--ogui-radius-control,.85rem)!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  color:var(--ogui-ink)!important;
+  opacity:1;
+}
+#btn-channel::before,#btn-channel::after,
 #btn-source::before,#btn-source::after,
 button[onclick="share()"]::before,button[onclick="share()"]::after,
 a[aria-label="Kembali ke Beranda"]::before,a[aria-label="Kembali ke Beranda"]::after,
 a[aria-label="Source Code"]::before,a[aria-label="Source Code"]::after{
   content:none!important;
   display:none!important;
+  box-shadow:none!important;
   background:none!important;
-  box-shadow:none!important;
-  border:0!important;
-}
-#menu-toggle,
-#btn-channel,
-#btn-source,
-button[onclick="share()"],
-a[aria-label="Kembali ke Beranda"],
-a[aria-label="Source Code"]{
-  background:transparent!important;
-  border:1px solid transparent!important;
-  border-radius:var(--radius-control)!important;
-  box-shadow:none!important;
-  -webkit-backdrop-filter:none!important;
-  backdrop-filter:none!important;
-  color:var(--ogui-ink)!important;
-  opacity:.9;
-  transition:background 150ms ease,color 150ms ease,transform 120ms ease,opacity 150ms ease;
 }
 button[onclick="share()"]{color:var(--ogui-color-accent)!important}
-#menu-toggle:hover,
-#btn-channel:hover,
-#btn-source:hover,
-button[onclick="share()"]:hover,
-a[aria-label="Kembali ke Beranda"]:hover,
-a[aria-label="Source Code"]:hover{
-  background:var(--ogui-control-hover)!important;
-  border-color:transparent!important;
-  color:var(--ogui-color-accent)!important;
-  opacity:1;
-}
-#menu-toggle:active,
-#btn-channel:active,
-#btn-source:active,
-button[onclick="share()"]:active,
-a[aria-label="Kembali ke Beranda"]:active,
-a[aria-label="Source Code"]:active{
-  background:var(--ogui-control-active)!important;
-  transform:scale(.96);
-  opacity:1;
-}
-#menu-toggle:focus-visible,
-#btn-channel:focus-visible,
-#btn-source:focus-visible,
-button[onclick="share()"]:focus-visible,
-a[aria-label="Kembali ke Beranda"]:focus-visible,
-a[aria-label="Source Code"]:focus-visible{
-  outline:2px solid var(--ogui-focus);
-  outline-offset:2px;
-}
-#menu-toggle svg,
 #btn-channel svg,#btn-source svg,
 button[onclick="share()"] svg,
 a[aria-label="Kembali ke Beranda"] svg,
