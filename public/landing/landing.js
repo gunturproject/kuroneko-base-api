@@ -13,33 +13,38 @@ function resolveAssetUrl(value){
 
 function playThumbVideo(video){
     let unlocked=false;
+    const events=['pointerdown','pointerup','touchstart','touchend','click','keydown','keyup'];
+
+    const playSilent=()=>{
+        video.muted=true;
+        const silent=video.play();
+        if(silent&&silent.catch) silent.catch(()=>{});
+    };
+
+    const detach=()=>events.forEach(name=>document.removeEventListener(name,unlock));
+
+    const unlock=(event)=>{
+        if(unlocked || (event && event.isTrusted===false)) return;
+        video.muted=false;
+        const attempt=video.play();
+        if(attempt&&attempt.then){
+            attempt.then(()=>{
+                unlocked=true;
+                detach();
+            }).catch(playSilent);
+        }else{
+            unlocked=true;
+            detach();
+        }
+    };
 
     const start=()=>{
         video.muted=false;
         const attempt=video.play();
-        if(attempt&&attempt.catch){
-            attempt.catch(()=>{
-                if(unlocked) return;
-                video.muted=true;
-                const silent=video.play();
-                if(silent&&silent.catch) silent.catch(()=>{});
-            });
-        }
+        if(attempt&&attempt.catch) attempt.catch(playSilent);
     };
 
-    const unlock=()=>{
-        if(unlocked) return;
-        unlocked=true;
-        detach();
-        video.muted=false;
-        const resumed=video.play();
-        if(resumed&&resumed.catch) resumed.catch(()=>{});
-    };
-
-    const events=['pointerdown','touchstart','click','keydown','mousemove','wheel','scroll'];
-    const detach=()=>events.forEach(name=>document.removeEventListener(name,unlock));
-    events.forEach(name=>document.addEventListener(name,unlock,{once:true,passive:true}));
-
+    events.forEach(name=>document.addEventListener(name,unlock,{passive:true}));
     start();
     video.addEventListener('loadeddata',()=>{ if(!unlocked) start(); },{once:true});
 }
