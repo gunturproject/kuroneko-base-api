@@ -250,15 +250,8 @@ async function kuroneko(config) {
     }
 
     for (const route of allRoutes) {
-        const color =
-            route.method === "GET"
-                ? "text-sky-400"
-                : route.method === "POST"
-                    ? "text-emerald-400"
-                    : "text-amber-400";
-
         terminalLog(
-            `[ + ] <span class="${color} font-bold w-12 inline-block">${route.method}</span> ${route.endpoint} <span class="text-slate-600">✓</span>`,
+            `[ + ] <span class="mini-badge ogui-badge ${getMethodClass(route.method)}">${route.method}</span> ${route.endpoint} <span class="text-slate-600">✓</span>`,
             "info"
         );
 
@@ -296,6 +289,13 @@ function setUi(config) {
 
         document.head.appendChild(link);
     }
+}
+
+function getMethodClass(method) {
+    if (method === "GET") return "get";
+    if (method === "POST") return "post";
+    if (method === "DELETE") return "delete";
+    return "other";
 }
 
 function buildExampleSnippets(origin, endpoint) {
@@ -726,14 +726,7 @@ function buildSidebarTree(tags) {
                 ...route
             };
 
-            const methodClass =
-                route.method === "GET"
-                    ? "get"
-                    : route.method === "POST"
-                        ? "post"
-                        : route.method === "DELETE"
-                            ? "delete"
-                            : "other";
+            const methodClass = getMethodClass(route.method);
 
             const btn = document.createElement("button");
 
@@ -900,14 +893,7 @@ function renderEndpointCard(route, id) {
         `;
     }
 
-    const methodClass =
-        route.method === "GET"
-            ? "get"
-            : route.method === "POST"
-                ? "post"
-                : route.method === "DELETE"
-                    ? "delete"
-                    : "other";
+    const methodClass = getMethodClass(route.method);
 
     const descHtml = route.description
         ? `
@@ -928,7 +914,7 @@ function renderEndpointCard(route, id) {
                     <span>${route.cat}</span>
                 </div>
 
-                <div class="flex items-start gap-3">
+                <div class="flex items-center gap-3">
                     <span class="method-badge ogui-badge ${methodClass}">
                         ${route.method}
                     </span>
