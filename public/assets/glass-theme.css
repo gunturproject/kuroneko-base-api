@@ -222,6 +222,65 @@ button, input { font: inherit; }
 .text-slate-300 { color: #dde4f2 !important; }
 .text-slate-200 { color: #e8edf7 !important; }
 
+/* ==========================================================================
+   SCROLL PERFORMANCE
+   Live backdrop-filter (blur + saturate) makes the compositor re-sample
+   everything behind EVERY glass element on every scroll frame. With dozens
+   of cards this is the #1 cause of scroll jank on low/mid devices.
+
+   The OpenGlass look is preserved through layered translucent gradients,
+   hairlines, inset highlights and shadows — only the expensive live blur is
+   removed. Overlay scrims are exempt: they appear rarely and stay static.
+   ========================================================================== */
+:where(html) :where(*):not(.sidebar-overlay):not(.ogui-overlay__scrim),
+:where(html) :where(*):not(.sidebar-overlay):not(.ogui-overlay__scrim)::before,
+:where(html) :where(*):not(.sidebar-overlay):not(.ogui-overlay__scrim)::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Denser fills compensate for the removed blur so text never collides with
+   content scrolling behind it. */
+:root {
+    --ogui-lg-fill: rgb(255 255 255 / 0.13);
+    --glass-fill: rgb(255 255 255 / 0.12);
+}
+
+/* Sticky header + live blur = re-blur on every frame. Use a baked gradient. */
+.site-header {
+    background: linear-gradient(180deg, rgb(18 13 42 / 0.97), rgb(11 9 24 / 0.94)) !important;
+}
+
+/* Sticky desktop sidebar (docs) needs the same treatment. */
+.sidebar {
+    background: linear-gradient(160deg, rgb(24 18 52 / 0.98), rgb(10 8 24 / 0.98)) !important;
+}
+
+/* Wallpaper is decorative — freeze it instead of animating a full-screen
+   fixed layer while scrolling. */
+.blob { animation: none !important; will-change: auto !important; }
+
+/* Isolate repaint work per card. */
+.glass-surface,
+.ogui-card,
+.clay-card,
+.ep-card,
+.resp-card,
+.stat-card,
+.nav-item { contain: layout style paint; }
+
+/* Let the browser skip layout/paint for off-screen repeated cards. The
+   `auto` keyword caches the real size once rendered, avoiding scroll jumps. */
+.ep-card,
+.resp-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 260px;
+}
+
+/* A hidden drawer should not keep a compositing layer alive. */
+.sidebar-overlay { visibility: hidden; }
+.sidebar-overlay.show { visibility: visible; }
+
 /* ------------------------------------------------------------- a11y states */
 @media (prefers-reduced-motion: reduce) {
     .blob { animation: none; }

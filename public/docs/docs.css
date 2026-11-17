@@ -2,7 +2,7 @@
    Real ogui-* components are used in markup; docs.js hooks are preserved. */
 :root { --header-h: 68px; }
 
-html { overflow-x: hidden; width: 100%; margin: 0; scroll-behavior: smooth; }
+html { overflow-x: clip; width: 100%; margin: 0; scroll-behavior: smooth; }
 body { overflow-x: clip; width: 100%; margin: 0; background: transparent; }
 .hidden { display: none !important; }
 .rotate-180 { transform: rotate(180deg); }
