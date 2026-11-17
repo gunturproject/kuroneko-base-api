@@ -1,0 +1,249 @@
+/* ============================================================
+   KURONEKO — FLUID SIZING
+   Dimuat PALING AKHIR di semua halaman.
+   Ukuran mengikuti lebar layar: nyaman di 320px, auto naik di desktop.
+   Tidak mengubah warna, ID, hook JS, atau class state apa pun.
+   ============================================================ */
+
+:root{
+  /* Type scale — fluid, bukan loncat-loncat antar breakpoint */
+  --fs-2xs:clamp(9.5px,0.52rem + 0.22vw,11px);
+  --fs-xs:clamp(10.5px,0.58rem + 0.26vw,12px);
+  --fs-sm:clamp(11.5px,0.64rem + 0.3vw,13px);
+  --fs-base:clamp(12.5px,0.72rem + 0.4vw,15px);
+  --fs-md:clamp(13.5px,0.78rem + 0.52vw,17px);
+  --fs-lg:clamp(15px,0.88rem + 0.72vw,21px);
+  --fs-xl:clamp(19px,1rem + 1.35vw,30px);
+  --fs-2xl:clamp(23px,1.15rem + 2vw,40px);
+
+  /* Ruang & radius — ikut lebar layar */
+  --pad-x:clamp(12px,0.35rem + 2.4vw,32px);
+  --pad-card:clamp(14px,0.55rem + 2.4vw,26px);
+  --gap:clamp(8px,0.3rem + 1.1vw,16px);
+  --radius-card:clamp(14px,0.6rem + 2vw,22px);
+  --radius-control:clamp(10px,0.45rem + 1.1vw,14px);
+  --tap:44px;
+
+  /* Header docs — sinkron dengan JS breakpoint 1024px */
+  --header-h:64px;
+}
+@media (min-width:640px){:root{--header-h:70px}}
+@media (min-width:1024px){:root{--header-h:76px}}
+
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,input{font-size:inherit}
+
+/* Kontrol & tombol: target sentuh minimal 44px di semua halaman */
+.ogui-button,
+.clay-btn,
+.clay-icon-btn,
+.icon-btn,
+.lang-tab,
+.folder-btn,
+.file-item,
+.notfound-actions .ogui-button{
+  min-height:var(--tap);
+}
+.clay-icon-btn,
+.icon-btn{width:var(--tap);height:var(--tap);min-width:var(--tap)}
+.clay-icon-btn svg,.icon-btn svg{width:clamp(17px,4.8vw,20px);height:clamp(17px,4.8vw,20px)}
+
+/* Radius mengikuti layar, tapi jangan sampai pipih di desktop */
+.ogui-card,.clay-card,.ep-card,.clay-stat-card,.clay-console-screen,
+.thumbs-wrap,.notfound-card,#intro-view{
+  border-radius:var(--radius-card);
+}
+.ogui-button,.clay-btn,.clay-icon-btn,.icon-btn,.lang-tab,
+.glass-input,.clay-input,.ogui-search,.folder-btn{
+  border-radius:var(--radius-control);
+}
+
+/* ============================================================
+   LANDING
+   ============================================================ */
+.landing .header-inner,
+body:has(.hero-title) .site-header .header-inner{
+  padding:clamp(10px,2.6vw,14px) var(--pad-x);
+  gap:var(--gap);
+}
+.header-logo{width:clamp(34px,9vw,40px);height:clamp(34px,9vw,40px)}
+.header-name,.nav-title{font-size:var(--fs-base)}
+.nav-caption,.sidebar-footer,.footer-credit p{font-size:var(--fs-xs);letter-spacing:.1em}
+.sidebar-navi,.sidebar-nav{gap:clamp(8px,2vw,10px)}
+.nav-item{padding:clamp(11px,3vw,14px);gap:clamp(10px,2.6vw,12px)}
+.nav-icon{width:var(--tap);height:var(--tap)}
+.sidebar-divider{margin:clamp(14px,3.5vw,18px) 0 clamp(10px,2.5vw,12px)}
+.main-content{padding:clamp(24px,7vw,48px) var(--pad-x) clamp(36px,8vw,56px)}
+.content,.loader{width:100%;max-width:min(100%,clamp(320px,88vw,520px))}
+.loader{gap:clamp(14px,3.5vw,18px)}
+.loader-line-lg{height:clamp(22px,5vw,26px)}
+.loader-line-sm,.loader-line-xs{height:clamp(10px,2.6vw,12px)}
+.thumbs-wrap,.thumb-wrap{
+  border-radius:var(--radius-card);
+  margin-bottom:clamp(18px,4.2vw,28px);
+}
+.hero-text{margin-bottom:clamp(20px,5vw,30px)}
+.hero-badge{margin-bottom:clamp(10px,2.6vw,14px)}
+.hero-title{font-size:var(--fs-2xl);margin:0 0 clamp(8px,2vw,12px);letter-spacing:-.03em}
+.hero-underline{
+  width:clamp(36px,10vw,52px);
+  height:clamp(4px,1.2vw,6px);
+  margin:0 auto clamp(12px,3vw,18px);
+}
+.hero-desc{font-size:var(--fs-base);line-height:1.65;padding:0 clamp(2px,1.5vw,8px)}
+.hero-actions{gap:var(--gap);margin-top:clamp(18px,4vw,26px)}
+.footer-credit{padding-top:clamp(16px,4vw,20px)}
+
+@media (max-width:1023px){
+  .sidebar{padding:clamp(16px,4vw,20px) clamp(14px,4vw,18px);width:min(90vw,340px);max-width:340px}
+}
+
+/* ============================================================
+   404
+   ============================================================ */
+.notfound-wrap{padding:var(--pad-x);min-height:100vh;min-height:100dvh}
+.notfound-card{
+  width:min(100%,clamp(300px,92vw,460px));
+  padding:var(--pad-card);
+  gap:clamp(10px,2.8vw,16px);
+}
+.notfound-glyph{
+  padding:clamp(8px,2vw,12px) clamp(12px,4vw,20px);
+  font-size:var(--fs-md);
+  letter-spacing:.06em;
+}
+.notfound-card .ogui-card__title{font-size:var(--fs-xl)}
+.notfound-card .ogui-card__body{font-size:var(--fs-base);line-height:1.65}
+.notfound-actions{gap:var(--gap);padding-top:clamp(8px,2vw,10px)}
+
+/* ============================================================
+   DOCS
+   ============================================================ */
+.header-inner{padding:0 var(--pad-x);gap:var(--gap)}
+.brand-title{font-size:var(--fs-base)}
+.brand-badge{font-size:var(--fs-2xs)}
+.brand-sub{font-size:var(--fs-2xs);letter-spacing:.12em}
+.brand{gap:var(--gap)}
+.header-actions{gap:clamp(4px,1.4vw,6px)}
+.main-area{padding:var(--pad-x) var(--pad-x) clamp(40px,8vw,56px)}
+.content-stack,.top-row{gap:clamp(16px,3vw,24px)}
+.clay-card,.ep-card,#intro-view{padding:var(--pad-card)}
+.ep-url{font-size:var(--fs-sm)}
+.param-grid{padding:0 var(--pad-card) var(--pad-card);gap:clamp(10px,2.6vw,14px)}
+.clay-btn{font-size:var(--fs-sm);padding:clamp(10px,2.5vw,12px) clamp(12px,3vw,16px);gap:var(--gap)}
+.clay-icon-btn{font-size:var(--fs-base)}
+.clay-input,.ogui-search{font-size:var(--fs-base);padding:clamp(10px,2.6vw,12px) 14px;min-height:var(--tap)}
+.search-icon{font-size:var(--fs-xs)}
+
+/* Ringkasan intro: 3 kolom tetap, angka & label ikut mengecil di HP */
+.intro-stats{gap:clamp(6px,2vw,10px);margin-bottom:clamp(16px,4vw,22px)}
+.intro-stat{padding:clamp(9px,2.6vw,12px) 6px}
+.intro-stat b{font-size:clamp(16px,4.6vw,22px)}
+.intro-stat span{font-size:var(--fs-2xs);letter-spacing:.04em}
+
+.stat-grid{gap:clamp(8px,2vw,12px)}
+.stat-tile{padding:clamp(10px,2.6vw,14px);gap:clamp(5px,1.5vw,6px);border-radius:var(--radius-control)}
+.stat-label{font-size:var(--fs-2xs)}
+.stat-value{font-size:var(--fs-base)}
+.intro-code,.resp-code{font-size:clamp(10px,2.7vw,12px);padding:clamp(12px,3vw,16px)}
+.term-screen{height:clamp(220px,58vw,320px)}
+.term-head{gap:var(--gap);padding:clamp(9px,2.5vw,12px) clamp(12px,3vw,16px)}
+.term-dot{width:clamp(10px,2.8vw,12px);height:clamp(10px,2.8vw,12px)}
+.term-title{font-size:var(--fs-2xs);letter-spacing:.08em}
+.term-prompt,.term-path{font-size:var(--fs-sm)}
+.status-table{min-width:420px}
+.status-table th{font-size:var(--fs-2xs);padding:clamp(7px,2vw,9px) clamp(8px,2.2vw,10px)}
+.status-table td{font-size:var(--fs-sm);padding:clamp(8px,2vw,10px)}
+.status-code{font-size:var(--fs-xs);padding:3px clamp(7px,2vw,9px)}
+
+.folder-btn{padding:clamp(10px,2.6vw,12px) clamp(12px,3vw,14px);gap:var(--gap)}
+.folder-icon{width:clamp(34px,9vw,38px);height:clamp(34px,9vw,38px);font-size:var(--fs-sm)}
+.folder-count,.folder-arrow,.file-item .file-name{font-size:var(--fs-sm)}
+.file-item{padding:clamp(9px,2.4vw,11px) 10px;gap:var(--gap)}
+.lang-tab{font-size:var(--fs-sm);padding:clamp(9px,2.6vw,11px) clamp(12px,3vw,16px)}
+.resp-card{padding:clamp(12px,3vw,16px)}
+.resp-badge,.resp-label{font-size:var(--fs-xs)}
+.toast-box{padding:clamp(11px,3vw,14px) clamp(14px,4vw,20px);gap:var(--gap)}
+.toast-check{width:clamp(22px,6vw,24px);height:clamp(22px,6vw,24px)}
+.sidebar-head .clay-icon-btn{width:var(--tap);height:var(--tap);min-width:var(--tap)}
+#term-logs{max-height:clamp(240px,62vw,360px)}
+.resp-examples img{max-height:clamp(220px,60vw,280px)}
+
+@media (max-width:1023px){
+  .sidebar{padding:clamp(16px,4vw,20px) clamp(14px,4vw,18px);width:min(90vw,340px);max-width:340px}
+  .sidebar-head{height:auto;min-height:var(--tap)}
+}
+@media (min-width:640px){
+  .main-area{padding:clamp(24px,4vw,28px) var(--pad-x) clamp(48px,6vw,56px)}
+}
+@media (min-width:1200px){
+  .main-area{padding:clamp(28px,3vw,32px) var(--pad-x) clamp(52px,5vw,60px)}
+}
+
+/* ============================================================
+   STATS — nav & teks panjang
+   ============================================================ */
+.stats-nav + main{
+  padding:clamp(20px,5vw,32px) var(--pad-x) clamp(40px,8vw,56px);
+  gap:clamp(14px,3vw,24px);
+}
+.stats-nav > div{
+  height:auto;
+  min-height:clamp(60px,15vw,80px);
+  padding:clamp(10px,2.6vw,14px) var(--pad-x);
+  gap:var(--gap);
+  flex-wrap:wrap;
+}
+.stats-nav > div > div:first-child{
+  min-width:0;
+  flex-shrink:1;
+  flex-wrap:wrap;
+  gap:clamp(8px,2vw,12px);
+}
+.stats-nav .clay-link{
+  min-height:var(--tap);
+  padding:clamp(10px,2.6vw,12px) clamp(12px,3vw,18px);
+  font-size:var(--fs-sm);
+  white-space:nowrap;
+}
+.stats-nav .text-\[10px\]{font-size:var(--fs-2xs)}
+.page-title{font-size:var(--fs-md)}
+.clay-stat-card{padding:var(--pad-card)}
+.clay-stat-icon.ogui-badge{
+  width:clamp(46px,12vw,52px);
+  height:clamp(46px,12vw,52px);
+  min-width:clamp(46px,12vw,52px);
+  min-height:clamp(46px,12vw,52px);
+  font-size:var(--fs-lg);
+}
+.stat-label{font-size:var(--fs-xs);letter-spacing:.08em}
+.stat-value{font-size:var(--fs-md);overflow-wrap:anywhere;word-break:break-word}
+.stat-sub{font-size:var(--fs-xs);overflow-wrap:anywhere;word-break:break-word}
+.uptrack{height:clamp(5px,1.4vw,6px)}
+.mem-head{gap:var(--gap);margin-bottom:clamp(16px,4vw,20px)}
+.mem-title{font-size:var(--fs-md);gap:var(--gap)}
+.mem-labels{font-size:var(--fs-xs);gap:var(--gap)}
+.mem-track{height:clamp(22px,6vw,26px)}
+.mem-free{font-size:var(--fs-xs);margin-top:clamp(10px,2.6vw,12px)}
+.stats-nav + main .flex.gap-2{flex-wrap:wrap;gap:clamp(6px,1.6vw,8px)}
+.stats-nav + main [class*="text-[10px]"]{font-size:var(--fs-2xs)}
+.stats-nav + main .text-\[10px\]{font-size:var(--fs-2xs)}
+
+/* Di layar sangat sempit, kartu stat 1 kolom sudah dari Tailwind —
+   tapi beri ruang ekstra antar kartu supaya nggak dempet. */
+@media (max-width:480px){
+  .stats-nav + main .grid.gap-6{gap:14px}
+  .clay-stat-card .flex.items-center.gap-4{margin-bottom:clamp(12px,3.5vw,16px)}
+  .stats-nav .page-title{font-size:var(--fs-sm)}
+}
+
+/* ============================================================
+   UMUM — teks mono panjang & scroll
+   ============================================================ */
+code,pre,.intro-code,.resp-code,.ep-url,.status-table{
+  overflow-wrap:anywhere;
+}
+.thumb-img{max-height:none}
+@media (prefers-reduced-motion:reduce){
+  .content,.main-area,.stats-nav + main{transition:none}
+}
