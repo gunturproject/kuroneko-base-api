@@ -60,6 +60,22 @@ interface TikTokUser {
     language?: string;
     isADVirtual?: boolean;
     profileTab?: Record<string, boolean>;
+    relation?: number;
+    roomId?: string;
+    uniqueIdModifyTime?: number;
+    downloadSetting?: number;
+    followingVisibility?: number;
+    recommendReason?: string;
+    nowInvitationCardUrl?: string;
+    nickNameModifyTime?: number;
+    isEmbedBanned?: boolean;
+    canExpPlaylist?: boolean;
+    profileEmbedPermission?: number;
+    eventList?: unknown[];
+    suggestAccountBind?: boolean;
+    isOrganization?: number;
+    UserStoryStatus?: number;
+    shortDramaCreator?: Record<string, unknown>;
 }
 
 interface TikTokDetail {
@@ -238,6 +254,42 @@ function stripTitleSuffix(title: string | null): string | null {
     return title.replace(/\s+on TikTok\s*$/i, '').trim() || null;
 }
 
+function uniqueList(values: string[]): string[] {
+    return Array.from(new Set(values.map((v) => v.trim()).filter(Boolean)));
+}
+
+/*
+ * Kontak yang DIPAJANGKAN PEMILIK AKUN di bio — BUKAN kredensial login.
+ * TikTok tidak pernah mengirim metode login / nomor terdaftar / email
+ * terdaftar milik akun lain di response publik mana pun.
+ */
+function extractPublicContacts(signature: string | undefined, bioLink: string | undefined) {
+    const text = signature || '';
+    const emails = uniqueList(
+        text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []
+    );
+    const links = uniqueList([
+        ...(text.match(/https?:\/\/[^\s]+/g) || []),
+        ...(text.match(/(?:^|\s)(?:www\.|linktr\.ee\/)[^\s]+/gi) || []),
+        ...(bioLink ? [bioLink] : [])
+    ]);
+    const waLinks = uniqueList(text.match(/https?:\/\/wa\.me\/\d+/gi) || []);
+    const phones = uniqueList(
+        (text.match(/(?:\+?\d[\d\s().-]{7,}\d)/g) || [])
+            .map((v) => v.replace(/[^\d+]/g, ''))
+            .filter((v) => v.replace(/\D/g, '').length >= 8)
+    );
+
+    return {
+        email_in_bio: emails,
+        phone_in_bio: phones,
+        whatsapp_in_bio: waLinks,
+        links_in_bio: links,
+        source: 'public_bio_signature',
+        note: 'Ini kontak yang sengaja dipajang di bio. Bukan nomor/email yang dipakai saat daftar atau login.'
+    };
+}
+
 export default async function tiktokProfileHandler(req: Request, res: Response) {
     const raw = String(
         req.query.username ?? req.query.user ?? req.query.url ?? req.body?.username ?? ''
@@ -394,6 +446,7 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
 
         const itemList = detail.userInfo!.itemList;
         const videoCount = Array.isArray(itemList) ? itemList.length : 0;
+        const contacts = extractPublicContacts(user.signature, user.bioLink?.link);
 
         return res.json({
             status: true,
@@ -479,7 +532,65 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
                     comment_setting: user.commentSetting ?? null,
                     duet_setting: user.duetSetting ?? null,
                     stitch_setting: user.stitchSetting ?? null,
-                    profile_tab: user.profileTab || null
+                    download_setting: user.downloadSetting ?? null,
+                    following_visibility: user.followingVisibility ?? null,
+                    profile_embed_permission: user.profileEmbedPermission ?? null,
+                    is_embed_banned: Boolean(user.isEmbedBanned),
+                    can_exp_playlist: Boolean(user.canExpPlaylist),
+                    profile_tab: user.profileTab || null,
+                    is_organization: user.isOrganization ?? null,
+                    short_drama_creator: user.shortDramaCreator || null,
+                    relation: user.relation ?? null,
+                    room_id: user.roomId || null,
+                    unique_id_modify_time: user.uniqueIdModifyTime ?? null,
+                    nickname_modify_time: user.nickNameModifyTime ?? null,
+                    recommend_reason: user.recommendReason || null,
+                    invitation_card_url: user.nowInvitationCardUrl || null,
+                    event_list: Array.isArray(user.eventList) ? user.eventList : [],
+                    suggest_account_bind: Boolean(user.suggestAccountBind),
+                    story_status: user.UserStoryStatus ?? null
+                },
+                contact: contacts,
+                login: {
+                    method: null,
+                    provider: null,
+                    phone: null,
+                    email: null,
+                    registered_with: null,
+                    two_factor_enabled: null,
+                    available: false,
+                    reason: 'Metode login, nomor terdaftar, dan email terdaftar adalah data privat. TikTok tidak mengirimkannya di profil publik/SSR/oEmbed; hanya pemilik akun yang bisa melihatnya di Settings and privacy. Aku sengaja mengembalikan null, bukan menebak.',
+                    possible_values_if_available: [
+                        'google',
+                        'phone',
+                        'email',
+                        'facebook',
+                        'apple',
+                        'twitter',
+                        'username_password'
+                    ]
+                },
+                flags: {
+                    verified: Boolean(user.verified),
+                    private_account: Boolean(user.privateAccount || user.secret),
+                    ftc: Boolean(user.ftc),
+                    tt_seller: Boolean(user.ttSeller),
+                    ad_virtual: Boolean(user.isADVirtual),
+                    is_organization: Boolean(user.isOrganization),
+                    is_embed_banned: Boolean(user.isEmbedBanned)
+                },
+                raw: {
+                    user: user,
+                    stats_public: stats || null,
+                    stats_precise: hasPrecise ? statsV2 || null : null,
+                    scope_keys: Object.keys({
+                        'webapp.user-detail': detail,
+                        'webapp.app-context': scope.appContext,
+                        'webapp.biz-context': scope.bizContext,
+                        'seo.abtest': scope.seo
+                    }),
+                    oembed: embed || null,
+                    og_meta: og
                 },
                 content: {
                     videos: Array.isArray(itemList) ? itemList : [],
