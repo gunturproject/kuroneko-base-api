@@ -145,9 +145,10 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
 
         const form = new FormData();
         form.append('reqtype', 'fileupload');
+        form.append('time', '72h');
         form.append('fileToUpload', new Blob([output], { type: mime }), `kuroneko-upscale-${Date.now()}.${EXT[format]}`);
 
-        const uploaded = await fetch('https://catbox.moe/user/api.php', {
+        const uploaded = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
             method: 'POST',
             body: form,
             signal: AbortSignal.timeout(60000)
@@ -159,7 +160,7 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
         }
 
         const result = (await uploaded.text()).trim();
-        if (!/^https:\/\/(files|litterbox)\.catbox\.moe\/\S+$/.test(result)) {
+        if (!/^https:\/\/(files|litter|litterbox)\.catbox\.moe\/\S+$/.test(result)) {
             return res.status(502).json({
                 status: false,
                 message: 'Catbox mengembalikan respons yang tidak dikenali.'
