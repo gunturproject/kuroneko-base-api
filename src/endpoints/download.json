@@ -29,5 +29,18 @@
         "description": "Isi 1 untuk mengambil link kualitas HD (jika tersedia)"
       }
     ]
+  },
+  {
+    "name": "TikTok Profile Stalker",
+    "endpoint": "/api/download/tiktok-profile",
+    "filename": "tiktokProfile",
+    "method": "GET",
+    "params": [
+      {
+        "name": "username",
+        "required": true,
+        "description": "Username TikTok tanpa @ atau URL lengkap (contoh: andrastyt atau https://www.tiktok.com/@andrastyt). Mengembalikan info profil lengkap: nickname, bio, avatar, follower, following, likes, video count, verified, dll."
+      }
+    ]
   }
 ]
