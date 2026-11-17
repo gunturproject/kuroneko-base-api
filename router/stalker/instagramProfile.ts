@@ -386,7 +386,8 @@ async function loadSnapshot(
     const fbHeaders = {
         'User-Agent': FB_UA,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9'
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'identity'
     };
 
     const statuses: Record<string, string> = {};
@@ -451,6 +452,7 @@ async function loadSnapshot(
                 headers: {
                     'User-Agent': BROWSER_UA,
                     Accept: '*/*',
+                    'Accept-Encoding': 'identity',
                     'X-IG-App-ID': IG_APP_ID,
                     Referer: profileUrl
                 }
@@ -480,6 +482,7 @@ async function loadSnapshot(
             .filter(([key]) => key.startsWith('og_profile_page_'))
             .map(([key, value]) => `${key}:${value}`),
         og_bytes: ogHtml.length,
+        og_http: httpInfo,
         og_page_id: (ogHtml.match(/"pageID"\s*:\s*"([^"]+)"/i) || [])[1] || null,
         og_title_tag: (ogHtml.match(/<title>([^<]*)<\/title>/i) || [])[1] || null,
         not_found_page: isNotFound,
