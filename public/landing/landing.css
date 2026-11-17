@@ -2,3 +2,15 @@
 .sidebar-overlay{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgb(6 4 20 / .78);transition:opacity .18s ease-out;will-change:opacity}
 .sidebar{transition:transform .22s cubic-bezier(.22,1,.36,1);will-change:transform;transform:translate3d(-104%,0,0)}
 .sidebar.open{transform:translate3d(0,0,0)}
+
+/* No live blur on the sliding surface itself: recomputing a 30px backdrop
+   blur on every animation frame is what makes the drawer stutter on phones.
+   The gradient is already near-opaque, so it still reads as glass. */
+.sidebar{
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  background:linear-gradient(160deg,#1e163ef5,#0c091cf7);
+  box-shadow:12px 0 40px -16px rgb(0 0 0 / .75);
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+}
