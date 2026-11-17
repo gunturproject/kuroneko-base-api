@@ -96,6 +96,13 @@ interface TikTokScope {
     seo: Record<string, any> | null;
     appContext: Record<string, any> | null;
     bizContext: Record<string, any> | null;
+    allScopes: Record<string, any>;
+    userDetailStatus: Record<string, any> | null;
+    mobileUi: Record<string, any> | null;
+    linker: Record<string, any> | null;
+    wallet: Record<string, any> | null;
+    ab: Record<string, any> | null;
+    translation: Record<string, any> | null;
     waf: boolean;
 }
 
@@ -106,6 +113,15 @@ interface OgMeta {
     url: string | null;
     androidUrl: string | null;
     iosUrl: string | null;
+    twitterTitle: string | null;
+    twitterDescription: string | null;
+    twitterImage: string | null;
+    twitterCard: string | null;
+    fbAppId: string | null;
+    iosAppId: string | null;
+    androidPackage: string | null;
+    locale: string | null;
+    siteName: string | null;
 }
 
 function normalizeUsername(raw: string): string {
@@ -170,6 +186,13 @@ function parseScope(html: string): TikTokScope {
         seo: null,
         appContext: null,
         bizContext: null,
+        allScopes: {},
+        userDetailStatus: null,
+        mobileUi: null,
+        linker: null,
+        wallet: null,
+        ab: null,
+        translation: null,
         waf: /slardar-config|_wafchallengeid|Please wait\.\.\./i.test(html)
     };
 
@@ -182,6 +205,7 @@ function parseScope(html: string): TikTokScope {
         const scope = JSON.parse(match[1])?.__DEFAULT_SCOPE__ || {};
         const detail = scope['webapp.user-detail'] as TikTokDetail | undefined;
 
+        result.allScopes = scope;
         if (detail?.userInfo?.user) {
             result.detail = detail;
             result.waf = false;
@@ -189,6 +213,18 @@ function parseScope(html: string): TikTokScope {
         result.seo = scope['seo.abtest'] || null;
         result.appContext = scope['webapp.app-context'] || null;
         result.bizContext = scope['webapp.biz-context'] || null;
+        result.translation = scope['webapp.i18n-translation'] || null;
+        result.mobileUi = scope['mobile.smartui.uiStrategy.v2'] || null;
+        result.linker = scope['webapp.linker-strategy'] || null;
+        result.wallet = scope['wallet.recharge.external-entry-info'] || null;
+        result.ab = scope['webapp.a-b'] || null;
+        if (detail) {
+            result.userDetailStatus = {
+                status_code: detail.statusCode ?? null,
+                status_msg: detail.statusMsg ?? null,
+                need_fix: Boolean(detail.needFix)
+            };
+        }
     } catch {
         // biarkan null; fallback akan menangani
     }
@@ -216,7 +252,16 @@ function parseOg(html: string): OgMeta {
         image: pick('og:image'),
         url: pick('og:url'),
         androidUrl: pick('al:android:url'),
-        iosUrl: pick('al:ios:url')
+        iosUrl: pick('al:ios:url'),
+        twitterTitle: pick('twitter:title'),
+        twitterDescription: pick('twitter:description'),
+        twitterImage: pick('twitter:image'),
+        twitterCard: pick('twitter:card'),
+        fbAppId: pick('fb:app_id'),
+        iosAppId: pick('al:ios:app_store_id'),
+        androidPackage: pick('al:android:package'),
+        locale: pick('og:locale'),
+        siteName: pick('og:site_name')
     };
 }
 
@@ -290,6 +335,63 @@ function extractPublicContacts(signature: string | undefined, bioLink: string | 
     };
 }
 
+function avatarExpiry(avatarUrl: string | undefined): string | null {
+    if (!avatarUrl) return null;
+    try {
+        const exp = new URL(avatarUrl).searchParams.get('x-expires');
+        const n = Number(exp);
+        return Number.isFinite(n) && n > 0 ? new Date(n * 1000).toISOString() : null;
+    } catch {
+        return null;
+    }
+}
+
+function buildDerived(input: {
+    createTime: number | undefined;
+    followers: number;
+    following: number;
+    likes: number;
+    videos: number;
+    friends: number;
+    publicFollowers: number;
+    publicLikes: number;
+}) {
+    const now = Date.now();
+    const created = input.createTime ? input.createTime * 1000 : null;
+    const ageMs = created ? Math.max(0, now - created) : null;
+    const ageDays = ageMs ? Math.floor(ageMs / 86_400_000) : null;
+
+    return {
+        account_age: {
+            days: ageDays,
+            years: ageDays !== null ? Number((ageDays / 365.25).toFixed(2)) : null,
+            created_at: created ? new Date(created).toISOString() : null
+        },
+        ratios: {
+            followers_per_following:
+                input.following > 0
+                    ? Number((input.followers / input.following).toFixed(2))
+                    : null,
+            likes_per_video:
+                input.videos > 0 ? Number((input.likes / input.videos).toFixed(2)) : null,
+            friends_per_follower:
+                input.followers > 0
+                    ? Number((input.friends / input.followers).toFixed(6))
+                    : null,
+            followers_per_video:
+                input.videos > 0
+                    ? Number((input.followers / input.videos).toFixed(2))
+                    : null
+        },
+        public_vs_precise: {
+            follower_gap: input.publicFollowers - input.followers,
+            likes_gap: input.publicLikes - input.likes,
+            note: 'TikTok membulatkan angka di stats public; statsV2 adalah angka sebenarnya.'
+        },
+        note: 'Semua nilai di blok ini dihitung (derived), bukan field mentah TikTok.'
+    };
+}
+
 export default async function tiktokProfileHandler(req: Request, res: Response) {
     const raw = String(
         req.query.username ?? req.query.user ?? req.query.url ?? req.body?.username ?? ''
@@ -312,6 +414,12 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
             message: error?.message || 'Username tidak valid'
         });
     }
+
+    const compact =
+        req.query.compact === '1' ||
+        req.query.compact === 'true' ||
+        req.body?.compact === true ||
+        req.body?.compact === '1';
 
     const profileUrl = `https://www.tiktok.com/@${username}?lang=en`;
     const htmlHeaders = {
@@ -336,10 +444,8 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
             fetchOEmbed(username)
         ]);
 
-        const ssrHtml =
-            ssrResult.status === 'fulfilled'
-                ? String(ssrResult.value?.data ?? '')
-                : '';
+        const ssrResponse = ssrResult.status === 'fulfilled' ? ssrResult.value : null;
+        const ssrHtml = ssrResponse ? String(ssrResponse.data ?? '') : '';
         const ogHtml =
             ogResult.status === 'fulfilled' ? String(ogResult.value?.data ?? '') : '';
         const embed = embedResult.status === 'fulfilled' ? embedResult.value : null;
@@ -447,6 +553,35 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
         const itemList = detail.userInfo!.itemList;
         const videoCount = Array.isArray(itemList) ? itemList.length : 0;
         const contacts = extractPublicContacts(user.signature, user.bioLink?.link);
+        const derived = buildDerived({
+            createTime: user.createTime,
+            followers,
+            following,
+            likes,
+            videos,
+            friends,
+            publicFollowers: statNumber(stats, 'followerCount'),
+            publicLikes: statNumber(stats, 'heartCount')
+        });
+        const statusHeaders = ssrResponse?.headers || {};
+        const httpInfo = {
+            request_url: profileUrl,
+            final_url: ssrResponse?.request?.res?.responseUrl || null,
+            status: ssrResponse?.status ?? null,
+            status_text: ssrResponse?.statusText || null,
+            from_cache: Boolean((statusHeaders as Record<string, any>)['x-vercel-cache']),
+            headers: compact
+                ? null
+                : {
+                      'content-type': statusHeaders['content-type'] || null,
+                      'content-length': statusHeaders['content-length'] || null,
+                      server: statusHeaders.server || null,
+                      'x-vercel-cache': statusHeaders['x-vercel-cache'] || null,
+                      date: statusHeaders.date || null,
+                      'last-modified': statusHeaders['last-modified'] || null,
+                      'cache-control': statusHeaders['cache-control'] || null
+                  }
+        };
 
         return res.json({
             status: true,
@@ -466,7 +601,15 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
                         larger: user.avatarLarger || null,
                         medium: user.avatarMedium || null,
                         thumb: user.avatarThumb || null,
-                        og_image: og.image || null
+                        og_image: og.image || null,
+                        expires_at: avatarExpiry(user.avatarLarger),
+                        idc: (() => {
+                            try {
+                                return new URL(user.avatarLarger || '').searchParams.get('idc');
+                            } catch {
+                                return null;
+                            }
+                        })()
                     },
                     bio: user.signature || null,
                     bio_link: user.bioLink?.link || null,
@@ -579,18 +722,46 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
                     is_organization: Boolean(user.isOrganization),
                     is_embed_banned: Boolean(user.isEmbedBanned)
                 },
+                derived,
+                technical: {
+                    ssr_status: scope.userDetailStatus,
+                    mobile_ui_strategy: scope.mobileUi,
+                    linker_strategy: scope.linker,
+                    wallet: scope.wallet,
+                    a_b: scope.ab,
+                    translation: compact
+                        ? scope.translation
+                            ? {
+                                  top_level_keys: Object.keys(scope.translation),
+                                  language_keys: Object.keys(
+                                      (scope.translation as Record<string, any>).Webapp || {}
+                                  ).length,
+                                  note: 'Pakai endpoint tanpa ?compact=1 untuk isi terjemahan lengkap.'
+                              }
+                            : null
+                        : scope.translation,
+                    waf_challenge: scope.waf,
+                    response_truncated: false
+                },
+                http: httpInfo,
                 raw: {
                     user: user,
                     stats_public: stats || null,
                     stats_precise: hasPrecise ? statsV2 || null : null,
-                    scope_keys: Object.keys({
-                        'webapp.user-detail': detail,
-                        'webapp.app-context': scope.appContext,
-                        'webapp.biz-context': scope.bizContext,
-                        'seo.abtest': scope.seo
-                    }),
+                    scope_keys: Object.keys(scope.allScopes),
+                    scope_sizes_bytes: compact
+                        ? null
+                        : Object.fromEntries(
+                              Object.entries(scope.allScopes).map(([key, value]) => [
+                                  key,
+                                  JSON.stringify(value || {}).length
+                              ])
+                          ),
+                    scopes: compact ? null : scope.allScopes,
                     oembed: embed || null,
-                    og_meta: og
+                    og_meta: og,
+                    ssr_blob_present: ssrHtml.includes('__UNIVERSAL_DATA_FOR_REHYDRATION__'),
+                    ssr_html_bytes: ssrHtml.length
                 },
                 content: {
                     videos: Array.isArray(itemList) ? itemList : [],

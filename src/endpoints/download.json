@@ -39,7 +39,12 @@
       {
         "name": "username",
         "required": true,
-        "description": "Username TikTok tanpa @ atau URL lengkap (contoh: andrastyt atau https://www.tiktok.com/@andrastyt). Mengembalikan info profil lengkap: nickname, bio, avatar, follower, following, likes, video count, verified, dll."
+        "description": "Username TikTok tanpa @ atau URL lengkap (contoh: andrastyt atau https://www.tiktok.com/@andrastyt). Mengembalikan SEMUA info yang tersedia: profil, region, statistik presisi (statsV2), akun, kontak dari bio, flag, raw SSR 9 scope, meta oEmbed/OG, derived metrics, dan accuracy cross-check."
+      },
+      {
+        "name": "compact",
+        "required": false,
+        "description": "Isi 1 untuk response ringkas (tanpa raw scopes penuh & i18n). Default: lengkap."
       }
     ]
   }
