@@ -1,3 +1,4 @@
+.fa-solid,.fa-regular,.fa-brands{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;line-height:1}.fa-solid::before,.fa-regular::before,.fa-brands::before{display:block;vertical-align:middle}
 /* Local SVG icon layer — replaces the 100KB Font Awesome CDN.
    Icons: Font Awesome Free 6.7.2 by @fontawesome — https://fontawesome.com
    License: https://fontawesome.com/license/free (Icons: CC BY 4.0). */
