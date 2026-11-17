@@ -38,6 +38,10 @@
       "dest": "/public/stats/stats.html"
     },
     {
+      "src": "/upscale/?",
+      "dest": "/public/upscale/upscale.html"
+    },
+    {
       "src": "/404.html",
       "dest": "/public/404.html"
     },
@@ -80,6 +84,15 @@
     },
     {
       "source": "/stats/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/upscale/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

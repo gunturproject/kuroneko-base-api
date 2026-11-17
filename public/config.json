@@ -135,6 +135,32 @@
             "description": "Custom Alias"
           }
         ]
+      },
+      {
+        "name": "Catbox Image Proxy",
+        "endpoint": "/api/tools/catbox-image",
+        "filename": "catboxImage",
+        "method": "GET",
+        "params": [
+          {
+            "name": "url",
+            "required": true,
+            "description": "Link gambar Catbox (files.catbox.moe), dipakai tool upscale"
+          }
+        ]
+      },
+      {
+        "name": "Catbox Image Upload",
+        "endpoint": "/api/tools/catbox-upload",
+        "filename": "catboxUpload",
+        "method": "POST",
+        "params": [
+          {
+            "name": "body",
+            "required": true,
+            "description": "Binary gambar hasil upscale (image/png, image/jpeg, image/webp)"
+          }
+        ]
       }
     ]
   }

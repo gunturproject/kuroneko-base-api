@@ -75,7 +75,8 @@ const logRequest = (req: Request, res: Response) => {
         '/config',
         '/favicon.ico',
         '/',
-        '/landing'
+        '/landing',
+        '/upscale'
     ];
 
     if (ignoredPaths.some((item) => req.path.startsWith(item))) {
@@ -187,6 +188,12 @@ app.get('/', (req: Request, res: Response) => {
 app.get('/docs', (req: Request, res: Response) => {
     return res.sendFile(
         path.join(process.cwd(), 'public', 'docs', 'docs.html')
+    );
+});
+
+app.get('/upscale', (req: Request, res: Response) => {
+    return res.sendFile(
+        path.join(process.cwd(), 'public', 'upscale', 'upscale.html')
     );
 });
 
