@@ -91,12 +91,12 @@
           {
             "name": "username",
             "required": true,
-            "description": "Username Roblox atau userId, juga menerima URL lengkap (contoh: jandel, 10916243, atau https://www.roblox.com/id/users/10916243/profile). Mengembalikan profil, statistik (friend/follower/following/group), avatar, presence/online status, group & role, experience, derived metrics, dan cross-check akurasi."
+            "description": "Username Roblox atau userId, juga menerima URL lengkap (contoh: jandel, 10916243, atau https://www.roblox.com/id/users/10916243/profile). Mengembalikan SEMUA info publik: profil, statistik, avatar (headshot 4 ukuran + 19 item yang dikenakan + outfit), presence/online status, group & role, experience (detail + votes), derived metrics, HTTP metadata, raw 16 sumber, dan cross-check akurasi."
           },
           {
             "name": "compact",
             "required": false,
-            "description": "Isi 1 untuk response ringkas (group & experience dipotong, raw search dihilangkan). Default: lengkap."
+            "description": "Isi 1 untuk response ringkas (group & experience dipotong, raw search/avatar detailed dihilangkan). Default: lengkap."
           }
         ]
       }

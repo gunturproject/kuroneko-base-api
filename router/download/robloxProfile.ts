@@ -5,10 +5,11 @@ import axios from 'axios';
  * Scrape profil Roblox publik via username ATAU userId.
  *
  * Sumber: endpoint API publik Roblox (users / friends / thumbnails /
- * groups / games / presence). Tidak butuh login atau cookie.
+ * groups / games / presence / avatar). Tidak butuh login atau cookie.
  *
- * Beberapa endpoint (badges, collectibles, friend list) butuh auth &
- * sengaja tidak dipakai supaya endpoint ini tetap jalan tanpa kredensial.
+ * Beberapa endpoint (badges, collectibles, friends list, name history)
+ * butuh auth & sengaja tidak dipakai supaya endpoint tetap jalan tanpa
+ * kredensial. Lihat technical.unavailable_public_endpoints.
  */
 
 const UA =
@@ -20,7 +21,9 @@ const API = {
     thumbnails: 'https://thumbnails.roblox.com/v1',
     groups: 'https://groups.roblox.com/v1',
     games: 'https://games.roblox.com/v2',
-    presence: 'https://presence.roblox.com/v1'
+    gamesV1: 'https://games.roblox.com/v1',
+    presence: 'https://presence.roblox.com/v1',
+    avatar: 'https://avatar.roblox.com/v1'
 };
 
 const PRESENCE_LABELS: Record<number, string> = {
@@ -30,6 +33,8 @@ const PRESENCE_LABELS: Record<number, string> = {
     3: 'In Studio',
     4: 'Invisible'
 };
+
+const HEADSHOT_SIZES = ['48x48', '100x100', '150x150', '420x420'] as const;
 
 interface RobloxUser {
     id?: number;
@@ -98,23 +103,21 @@ function toNumber(value: unknown): number {
     return Number.isFinite(n) ? n : 0;
 }
 
+function round(value: number, digits = 2): number {
+    const factor = 10 ** digits;
+    return Math.round(value * factor) / factor;
+}
+
 function uniqueList(values: string[]): string[] {
     return Array.from(new Set(values.map((v) => v.trim()).filter(Boolean)));
 }
 
 function derivedImageUrls(headshot: string | null): Record<string, string | null> {
     if (!headshot) {
-        return {
-            '48x48': null,
-            '100x100': null,
-            '150x150': null,
-            '250x250': null,
-            '420x420': null
-        };
+        return Object.fromEntries(HEADSHOT_SIZES.map((size) => [size, null]));
     }
-    const sizes = ['48x48', '100x100', '150x150', '250x250', '420x420'];
     return Object.fromEntries(
-        sizes.map((size) => [size, headshot.replace(/\/\d+x\d+\//, `/${size}/`)])
+        HEADSHOT_SIZES.map((size) => [size, headshot.replace(/\/\d+x\d+\//, `/${size}/`)])
     );
 }
 
@@ -131,6 +134,59 @@ function dataOf<T = any>(result: PromiseSettledResult<unknown>): T | null {
     if (result.status !== 'fulfilled') return null;
     const value = result.value as any;
     return (value?.data as T) ?? null;
+}
+
+function httpOf(result: PromiseSettledResult<unknown>): Record<string, any> {
+    if (result.status !== 'fulfilled') {
+        return {
+            ok: false,
+            status: null,
+            error:
+                axios.isAxiosError(result.reason) && result.reason.response
+                    ? `HTTP ${result.reason.response.status}`
+                    : 'error'
+        };
+    }
+    const v = result.value as any;
+    const headers = v?.headers || {};
+    const rawLength = headers['content-length'];
+    return {
+        ok: Boolean(v?.status >= 200 && v?.status < 300),
+        status: v?.status ?? null,
+        status_text: v?.statusText || null,
+        url: v?.config?.url || null,
+        content_type: headers['content-type'] || null,
+        content_length: rawLength !== undefined ? toNumber(rawLength) : null,
+        body_bytes: v?.data ? JSON.stringify(v.data).length : null
+    };
+}
+
+async function getWithRetry<T>(
+    url: string,
+    config: Record<string, any>,
+    attempts = 3
+): Promise<{ data: T }> {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        try {
+            return await axios.get<T>(url, config);
+        } catch (error) {
+            const retryable =
+                axios.isAxiosError(error) &&
+                (error.response?.status === 429 || toNumber(error.response?.status) >= 500);
+            if (!retryable || attempt === attempts - 1) throw error;
+            await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        }
+    }
+    throw new Error('Retry tidak berhasil');
+}
+
+function assetTypeCounts(assets: unknown[]): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const asset of assets) {
+        const name = String((asset as Record<string, any>)?.assetType?.name || 'Unknown');
+        counts[name] = (counts[name] || 0) + 1;
+    }
+    return counts;
 }
 
 export default async function robloxProfileHandler(req: Request, res: Response) {
@@ -165,7 +221,8 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
     const jsonHeaders = {
         'User-Agent': UA,
         Accept: 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9'
+        'Accept-Language': 'en-US,en;q=0.9',
+        Referer: 'https://www.roblox.com/'
     };
 
     try {
@@ -176,7 +233,7 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
         let exactMatch: boolean | null = null;
 
         if (!userId && input.username) {
-            const search = await axios.get<Record<string, any>>(
+            const search = await getWithRetry<Record<string, any>>(
                 `${API.users}/users/search`,
                 {
                     params: { keyword: input.username, limit: 10 },
@@ -222,49 +279,85 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
         }
 
         // ---- Fetch semua data publik secara paralel ----
-        const [userRes, friendsRes, followersRes, followingsRes, avatarRes, bustRes, groupsRes, gamesRes, presenceRes] =
-            await Promise.allSettled([
-                axios.get<RobloxUser>(`${API.users}/users/${userId}`, {
+        const thumbRequest = (size: string) =>
+            axios.get<Record<string, any>>(`${API.thumbnails}/users/avatar-headshot`, {
+                params: { userIds: userId, size, format: 'Png', isCircular: false },
+                timeout: 20000,
+                headers: jsonHeaders
+            });
+
+        const [
+            userRes,
+            friendsRes,
+            followersRes,
+            followingsRes,
+            avatarRes,
+            bustRes,
+            groupsRes,
+            gamesRes,
+            presenceRes,
+            wearingRes,
+            outfitsRes,
+            thumb48Res,
+            thumb100Res,
+            thumb150Res
+        ] = await Promise.allSettled([
+            axios.get<RobloxUser>(`${API.users}/users/${userId}`, {
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<{ count: number }>(`${API.friends}/users/${userId}/friends/count`, {
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<{ count: number }>(`${API.friends}/users/${userId}/followers/count`, {
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<{ count: number }>(`${API.friends}/users/${userId}/followings/count`, {
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<Record<string, any>>(`${API.thumbnails}/users/avatar-headshot`, {
+                params: { userIds: userId, size: '420x420', format: 'Png', isCircular: false },
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<Record<string, any>>(`${API.thumbnails}/users/avatar-bust`, {
+                params: { userIds: userId, size: '150x150', format: 'Png', isCircular: false },
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<Record<string, any>>(`${API.groups}/users/${userId}/groups/roles`, {
+                timeout: 30000,
+                headers: jsonHeaders
+            }),
+            axios.get<Record<string, any>>(`${API.games}/users/${userId}/games`, {
+                params: { limit: 50, sortOrder: 'Desc', isFavorite: false },
+                timeout: 30000,
+                headers: jsonHeaders
+            }),
+            axios.post<Record<string, any>>(
+                `${API.presence}/presence/users`,
+                { userIds: [userId] },
+                {
                     timeout: 20000,
-                    headers: jsonHeaders
-                }),
-                axios.get<{ count: number }>(`${API.friends}/users/${userId}/friends/count`, {
-                    timeout: 20000,
-                    headers: jsonHeaders
-                }),
-                axios.get<{ count: number }>(`${API.friends}/users/${userId}/followers/count`, {
-                    timeout: 20000,
-                    headers: jsonHeaders
-                }),
-                axios.get<{ count: number }>(`${API.friends}/users/${userId}/followings/count`, {
-                    timeout: 20000,
-                    headers: jsonHeaders
-                }),
-                axios.get<Record<string, any>>(`${API.thumbnails}/users/avatar-headshot`, {
-                    params: { userIds: userId, size: '420x420', format: 'Png', isCircular: false },
-                    timeout: 20000,
-                    headers: jsonHeaders
-                }),
-                axios.get<Record<string, any>>(`${API.thumbnails}/users/avatar-bust`, {
-                    params: { userIds: userId, size: '150x150', format: 'Png', isCircular: false },
-                    timeout: 20000,
-                    headers: jsonHeaders
-                }),
-                axios.get<Record<string, any>>(`${API.groups}/users/${userId}/groups/roles`, {
-                    timeout: 30000,
-                    headers: jsonHeaders
-                }),
-                axios.get<Record<string, any>>(`${API.games}/users/${userId}/games`, {
-                    params: { limit: 50, sortOrder: 'Desc', isFavorite: false },
-                    timeout: 30000,
-                    headers: jsonHeaders
-                }),
-                axios.post<Record<string, any>>(
-                    `${API.presence}/presence/users`,
-                    { userIds: [userId] },
-                    { timeout: 20000, headers: { ...jsonHeaders, 'Content-Type': 'application/json' } }
-                )
-            ]);
+                    headers: { ...jsonHeaders, 'Content-Type': 'application/json' }
+                }
+            ),
+            axios.get<Record<string, any>>(`${API.avatar}/users/${userId}/avatar`, {
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            axios.get<Record<string, any>>(`${API.avatar}/users/${userId}/outfits`, {
+                params: { page: 1, itemsPerPage: 50 },
+                timeout: 20000,
+                headers: jsonHeaders
+            }),
+            thumbRequest('48x48'),
+            thumbRequest('100x100'),
+            thumbRequest('150x150')
+        ]);
 
         const user = dataOf<RobloxUser>(userRes);
         if (!user || !user.id) {
@@ -275,6 +368,31 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
             });
         }
 
+        // ---- Game detail + votes (butuh universeId dari games) ----
+        const gamesFull = dataOf<Record<string, any>>(gamesRes)?.data || [];
+        const universeIds = gamesFull
+            .map((game: Record<string, any>) => toNumber(game?.id))
+            .filter((id: number) => id > 0);
+        const universeParam = universeIds.join(',');
+
+        let detailRes: PromiseSettledResult<unknown> | null = null;
+        let votesRes: PromiseSettledResult<unknown> | null = null;
+
+        if (universeParam) {
+            [detailRes, votesRes] = await Promise.allSettled([
+                axios.get<Record<string, any>>(`${API.gamesV1}/games`, {
+                    params: { universeIds: universeParam },
+                    timeout: 30000,
+                    headers: jsonHeaders
+                }),
+                axios.get<Record<string, any>>(`${API.gamesV1}/games/votes`, {
+                    params: { universeIds: universeParam },
+                    timeout: 30000,
+                    headers: jsonHeaders
+                })
+            ]);
+        }
+
         const resolvedId = user.id;
         const resolvedUsername = user.name || input.username || String(resolvedId);
         const profileUrl = `https://www.roblox.com/id/users/${resolvedId}/profile`;
@@ -283,14 +401,123 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
         const followerCount = toNumber(dataOf<{ count: number }>(followersRes)?.count);
         const followingCount = toNumber(dataOf<{ count: number }>(followingsRes)?.count);
 
-        const avatarEntry = dataOf<Record<string, any>>(avatarRes)?.data?.[0] || null;
+        const headshotUrl = dataOf<Record<string, any>>(avatarRes)?.data?.[0]?.imageUrl || null;
         const bustEntry = dataOf<Record<string, any>>(bustRes)?.data?.[0] || null;
-        const headshotUrl = avatarEntry?.imageUrl || null;
 
+        const realSizes: Record<string, string | null> = {
+            '420x420': headshotUrl
+        };
+        const thumbResults: Record<string, PromiseSettledResult<unknown>> = {
+            '48x48': thumb48Res,
+            '100x100': thumb100Res,
+            '150x150': thumb150Res
+        };
+        for (const [size, result] of Object.entries(thumbResults)) {
+            realSizes[size] = dataOf<Record<string, any>>(result)?.data?.[0]?.imageUrl || null;
+        }
+        const sizeFallbacks = derivedImageUrls(headshotUrl);
+        for (const size of HEADSHOT_SIZES) {
+            if (!realSizes[size]) realSizes[size] = sizeFallbacks[size];
+        }
+
+        // ---- Avatar wearing & outfits ----
+        const wearingFull = dataOf<Record<string, any>>(wearingRes);
+        const wearingAssets: Record<string, any>[] = Array.isArray(wearingFull?.assets)
+            ? wearingFull.assets
+            : [];
+        const outfitsFull = dataOf<Record<string, any>>(outfitsRes);
+        const outfits: Record<string, any>[] = Array.isArray(outfitsFull?.data)
+            ? outfitsFull.data
+            : [];
+
+        // ---- Game detail + votes digabung per experience ----
+        const detailPayload = detailRes ? dataOf<Record<string, any>>(detailRes) : null;
+        const votesPayload = votesRes ? dataOf<Record<string, any>>(votesRes) : null;
+        const detailList: Record<string, any>[] = Array.isArray(detailPayload?.data)
+            ? detailPayload!.data
+            : [];
+        const votesList: Record<string, any>[] = Array.isArray(votesPayload?.data)
+            ? votesPayload!.data
+            : [];
+        const detailMap = new Map(detailList.map((item) => [toNumber(item?.id), item]));
+        const votesMap = new Map(votesList.map((item) => [toNumber(item?.id), item]));
+
+        const experiencesMerged = gamesFull.map((game: Record<string, any>) => {
+            const id = toNumber(game?.id);
+            const detail = detailMap.get(id) || {};
+            const vote = votesMap.get(id) || {};
+            const up = toNumber(vote?.upVotes);
+            const down = toNumber(vote?.downVotes);
+            const totalVotes = up + down;
+            return {
+                id: id || null,
+                name: game?.name ?? detail?.name ?? null,
+                description: game?.description ?? detail?.description ?? null,
+                creator: detail?.creator || game?.creator || null,
+                root_place: game?.rootPlace || null,
+                root_place_id: toNumber(detail?.rootPlaceId) || toNumber(game?.rootPlace?.id) || null,
+                created: game?.created ?? detail?.created ?? null,
+                updated: game?.updated ?? detail?.updated ?? null,
+                place_visits: toNumber(detail?.visits) || toNumber(game?.placeVisits),
+                currently_playing: toNumber(detail?.playing),
+                max_players: toNumber(detail?.maxPlayers),
+                genre: detail?.genre || detail?.untranslated_genre_l1 || null,
+                universe_avatar_type: detail?.universeAvatarType || null,
+                favorited_count: toNumber(detail?.favoritedCount),
+                canonical_url_path: detail?.canonicalUrlPath || null,
+                copying_allowed: Boolean(detail?.copyingAllowed),
+                price: detail?.price ?? null,
+                votes: {
+                    up: up,
+                    down: down,
+                    total: totalVotes,
+                    approval_percent: totalVotes > 0 ? round((up / totalVotes) * 100, 2) : null,
+                    note: 'approval_percent dihitung (up / (up+down)), bukan rating resmi Roblox.'
+                }
+            };
+        });
+
+        const totalUpvotes = experiencesMerged.reduce(
+            (sum: number, game: Record<string, any>) => sum + toNumber(game?.votes?.up),
+            0
+        );
+        const totalDownvotes = experiencesMerged.reduce(
+            (sum: number, game: Record<string, any>) => sum + toNumber(game?.votes?.down),
+            0
+        );
+        const totalFavorites = experiencesMerged.reduce(
+            (sum: number, game: Record<string, any>) => sum + toNumber(game?.favorited_count),
+            0
+        );
+        const totalPlaying = experiencesMerged.reduce(
+            (sum: number, game: Record<string, any>) => sum + toNumber(game?.currently_playing),
+            0
+        );
+        const placeVisits = experiencesMerged.reduce(
+            (sum: number, game: Record<string, any>) => sum + toNumber(game?.place_visits),
+            0
+        );
+
+        const topGames = [...experiencesMerged]
+            .sort(
+                (a: Record<string, any>, b: Record<string, any>) =>
+                    toNumber(b?.place_visits) - toNumber(a?.place_visits)
+            )
+            .slice(0, 5);
+
+        // ---- Groups ----
         const groupsFull = dataOf<Record<string, any>>(groupsRes)?.data || [];
-        const gamesFull = dataOf<Record<string, any>>(gamesRes)?.data || [];
         const groups = compact ? groupsFull.slice(0, 20) : groupsFull;
-        const games = compact ? gamesFull.slice(0, 10) : gamesFull;
+        const rankCounts: Record<string, number> = {};
+        let largestGroup: Record<string, any> | null = null;
+        for (const entry of groupsFull) {
+            const rank = String(entry?.role?.name || 'Unknown');
+            rankCounts[rank] = (rankCounts[rank] || 0) + 1;
+            const memberCount = toNumber(entry?.group?.memberCount);
+            if (!largestGroup || memberCount > toNumber(largestGroup?.group?.memberCount)) {
+                largestGroup = entry;
+            }
+        }
 
         const presenceEntry = dataOf<Record<string, any>>(presenceRes)?.userPresences?.[0] || null;
         const presenceType = toNumber(presenceEntry?.userPresenceType);
@@ -300,40 +527,36 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
             ? Math.floor(Math.max(0, Date.now() - createdMs) / 86_400_000)
             : null;
 
-        const placeVisits = gamesFull.reduce(
-            (sum: number, game: Record<string, any>) => sum + toNumber(game?.placeVisits),
-            0
+        const endpointResults: Record<string, PromiseSettledResult<unknown>> = {
+            users: userRes,
+            friends_count: friendsRes,
+            followers_count: followersRes,
+            followings_count: followingsRes,
+            avatar_headshot: avatarRes,
+            avatar_bust: bustRes,
+            avatar_wearing: wearingRes,
+            avatar_outfits: outfitsRes,
+            headshot_48: thumb48Res,
+            headshot_100: thumb100Res,
+            headshot_150: thumb150Res,
+            groups: groupsRes,
+            games: gamesRes,
+            presence: presenceRes
+        };
+        if (detailRes) endpointResults.game_details = detailRes;
+        if (votesRes) endpointResults.game_votes = votesRes;
+
+        const sources = Object.keys(endpointResults).filter(
+            (key) => endpointResults[key].status === 'fulfilled'
         );
-        const topGames = [...gamesFull]
-            .sort((a: Record<string, any>, b: Record<string, any>) =>
-                toNumber(b?.placeVisits) - toNumber(a?.placeVisits)
-            )
-            .slice(0, 5)
-            .map((game: Record<string, any>) => ({
-                id: game?.id ?? null,
-                name: game?.name ?? null,
-                place_id: game?.rootPlace?.id ?? null,
-                created: game?.created ?? null,
-                updated: game?.updated ?? null,
-                place_visits: toNumber(game?.placeVisits)
-            }));
-
-        const rankCounts: Record<string, number> = {};
-        for (const entry of groupsFull) {
-            const rank = String(entry?.role?.name || 'Unknown');
-            rankCounts[rank] = (rankCounts[rank] || 0) + 1;
+        const statuses: Record<string, string> = {};
+        const httpInfo: Record<string, any> = {};
+        for (const [key, result] of Object.entries(endpointResults)) {
+            statuses[key] = statusOf(result);
+            httpInfo[key] = compact
+                ? { ok: result.status === 'fulfilled', status: statusOf(result) }
+                : httpOf(result);
         }
-
-        const sources: string[] = [];
-        if (userRes.status === 'fulfilled') sources.push('users');
-        if (friendsRes.status === 'fulfilled') sources.push('friends');
-        if (followersRes.status === 'fulfilled') sources.push('followers');
-        if (followingsRes.status === 'fulfilled') sources.push('followings');
-        if (avatarRes.status === 'fulfilled') sources.push('avatar');
-        if (bustRes.status === 'fulfilled') sources.push('bust');
-        if (groupsRes.status === 'fulfilled') sources.push('groups');
-        if (gamesRes.status === 'fulfilled') sources.push('games');
-        if (presenceRes.status === 'fulfilled') sources.push('presence');
 
         const nameMatches =
             input.username && user.name
@@ -342,7 +565,7 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
 
         return res.json({
             status: true,
-            partial: sources.length < 9,
+            partial: sources.length < Object.keys(endpointResults).length,
             data: {
                 profile: {
                     id: resolvedId,
@@ -372,6 +595,12 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
                     groups: groupsFull.length,
                     experiences_returned: gamesFull.length,
                     total_place_visits: placeVisits,
+                    total_favorited: totalFavorites,
+                    total_upvotes: totalUpvotes,
+                    total_downvotes: totalDownvotes,
+                    currently_playing: totalPlaying,
+                    avatar_assets_worn: wearingAssets.length,
+                    outfits: outfits.length,
                     formatted: {
                         followers:
                             followerCount >= 1_000_000
@@ -384,11 +613,44 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
                 avatar: {
                     headshot: headshotUrl,
                     bust: bustEntry?.imageUrl || null,
-                    headshot_state: avatarEntry?.state || null,
+                    headshot_state: dataOf<Record<string, any>>(avatarRes)?.data?.[0]?.state || null,
                     bust_state: bustEntry?.state || null,
-                    version: avatarEntry?.version || bustEntry?.version || null,
-                    derived_sizes: derivedImageUrls(headshotUrl),
-                    note: 'derived_sizes adalah URL headshot yang sama dengan ukuran diubah; bukan endpoint terpisah.'
+                    version:
+                        dataOf<Record<string, any>>(avatarRes)?.data?.[0]?.version ||
+                        bustEntry?.version ||
+                        null,
+                    sizes_real: realSizes,
+                    sizes_derived: derivedImageUrls(headshotUrl),
+                    wearing: {
+                        player_avatar_type: wearingFull?.playerAvatarType || null,
+                        scales: wearingFull?.scales || null,
+                        body_colors: wearingFull?.bodyColors || null,
+                        asset_count: wearingAssets.length,
+                        asset_type_counts: assetTypeCounts(wearingAssets),
+                        assets: compact
+                            ? wearingAssets.slice(0, 25)
+                            : wearingAssets.map((asset) => ({
+                                  id: asset?.id ?? null,
+                                  name: asset?.name ?? null,
+                                  asset_type_id: asset?.assetType?.id ?? null,
+                                  asset_type: asset?.assetType?.name ?? null,
+                                  current_version_id: asset?.currentVersionId ?? null
+                              }))
+                    },
+                    outfits: {
+                        count: toNumber(outfitsFull?.total ?? outfitsFull?.filteredCount ?? outfits.length),
+                        returned: outfits.length,
+                        items: compact
+                            ? outfits.slice(0, 10)
+                            : outfits.map((outfit) => ({
+                                  id: outfit?.id ?? null,
+                                  name: outfit?.name ?? null,
+                                  created: outfit?.created ?? null,
+                                  updated: outfit?.updated ?? null,
+                                  is_editable: Boolean(outfit?.isEditable)
+                              }))
+                    },
+                    note: 'sizes_real berasal dari request thumbnail terpisah per ukuran; sizes_derived adalah fallback dari URL 420x420.'
                 },
                 presence: {
                     type: presenceType,
@@ -404,6 +666,15 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
                     count: groupsFull.length,
                     returned: groups.length,
                     rank_counts: rankCounts,
+                    largest_group: largestGroup
+                        ? {
+                              id: largestGroup?.group?.id ?? null,
+                              name: largestGroup?.group?.name ?? null,
+                              member_count: toNumber(largestGroup?.group?.memberCount),
+                              role: largestGroup?.role?.name ?? null,
+                              rank: toNumber(largestGroup?.role?.rank)
+                          }
+                        : null,
                     items: groups.map((entry: Record<string, any>) => ({
                         id: entry?.group?.id ?? null,
                         name: entry?.group?.name ?? null,
@@ -432,53 +703,45 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
                 experiences: {
                     count_returned: gamesFull.length,
                     total_place_visits: placeVisits,
+                    total_favorited: totalFavorites,
+                    total_upvotes: totalUpvotes,
+                    total_downvotes: totalDownvotes,
                     top_by_visits: topGames,
-                    items: games.map((game: Record<string, any>) => ({
-                        id: game?.id ?? null,
-                        name: game?.name ?? null,
-                        description: game?.description ?? null,
-                        creator: game?.creator || null,
-                        root_place: game?.rootPlace || null,
-                        created: game?.created ?? null,
-                        updated: game?.updated ?? null,
-                        place_visits: toNumber(game?.placeVisits)
-                    }))
+                    items: compact
+                        ? experiencesMerged.slice(0, 10)
+                        : experiencesMerged
                 },
                 derived: {
                     account_age: {
                         days: ageDays,
-                        years: ageDays !== null ? Number((ageDays / 365.25).toFixed(2)) : null
+                        years: ageDays !== null ? round(ageDays / 365.25) : null
                     },
                     followers_per_friend:
-                        friendCount > 0
-                            ? Number((followerCount / friendCount).toFixed(2))
-                            : null,
+                        friendCount > 0 ? round(followerCount / friendCount) : null,
                     avg_place_visits_per_experience:
-                        gamesFull.length > 0
-                            ? Number((placeVisits / gamesFull.length).toFixed(2))
+                        gamesFull.length > 0 ? round(placeVisits / gamesFull.length) : null,
+                    overall_vote_approval_percent:
+                        totalUpvotes + totalDownvotes > 0
+                            ? round((totalUpvotes / (totalUpvotes + totalDownvotes)) * 100)
                             : null,
+                    avatar_asset_types: assetTypeCounts(wearingAssets),
+                    group_rank_top: Object.entries(rankCounts)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10)
+                        .map(([rank, count]) => ({ rank, count })),
                     note: 'Semua nilai di blok ini dihitung, bukan field mentah Roblox.'
                 },
                 technical: {
                     resolved_user_id: resolvedId,
                     input_source: input.source,
                     compact,
-                    endpoints: {
-                        users: statusOf(userRes),
-                        friends_count: statusOf(friendsRes),
-                        followers_count: statusOf(followersRes),
-                        followings_count: statusOf(followingsRes),
-                        avatar_headshot: statusOf(avatarRes),
-                        avatar_bust: statusOf(bustRes),
-                        groups: statusOf(groupsRes),
-                        games: statusOf(gamesRes),
-                        presence: statusOf(presenceRes)
-                    },
+                    endpoints: statuses,
+                    http: httpInfo,
                     unavailable_public_endpoints: [
-                        'badges (401 Unauthorized)',
-                        'collectibles (403 Forbidden)',
-                        'friends list (403 Forbidden)',
-                        'name-history (404)'
+                        'badges (401 - butuh authentication token)',
+                        'collectibles (403 - inventory privat)',
+                        'friends list (403 - butuh session Roblox)',
+                        'name-history (404 - endpoint tidak tersedia publik)'
                     ],
                     note: 'Endpoint di atas butuh auth/session Roblox, jadi sengaja tidak dipakai.'
                 },
@@ -497,13 +760,22 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
                     followings_count: dataOf(followingsRes),
                     avatar_headshot: dataOf(avatarRes),
                     avatar_bust: dataOf(bustRes),
+                    avatar_wearing: compact ? null : wearingFull,
+                    avatar_outfits: compact ? null : outfitsFull,
                     groups: compact ? groupsFull.slice(0, 20) : groupsFull,
                     games: compact ? gamesFull.slice(0, 10) : gamesFull,
+                    game_details: compact
+                        ? detailList.slice(0, 10)
+                        : detailRes
+                          ? detailList
+                          : null,
+                    game_votes: compact ? votesList.slice(0, 10) : votesRes ? votesList : null,
                     presence: dataOf(presenceRes)
                 },
                 accuracy: {
                     sources,
                     source_count: sources.length,
+                    total_sources: Object.keys(endpointResults).length,
                     cross_check: {
                         requested_username: input.username || null,
                         resolved_username: resolvedUsername,
