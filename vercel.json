@@ -14,13 +14,7 @@
   ],
   "headers": [
     {
-      "src": "/assets/.*\\.(?:css|js|mjs|woff2?|png|jpe?g|gif|svg|webp|ico)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800" }
-      ]
-    },
-    {
-      "src": "/(?:landing|docs|stats)/.*\\.(?:css|js)",
+      "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800" }
       ]
