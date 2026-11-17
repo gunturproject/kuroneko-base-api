@@ -84,3 +84,26 @@
   background-image:none!important;
   border-radius:0 var(--ogui-radius-control) var(--ogui-radius-control) 0;
 }
+
+/* The close button was absolutely pinned at the drawer's top-right, which put
+   it directly on top of the (now full-width) search row. Give it its own
+   compact 32px row so the two controls never share the same space. */
+@media (max-width:1023px){
+  .sidebar{padding-top:12px}
+  .sidebar-head{
+    position:static!important;
+    top:auto!important;
+    right:auto!important;
+    z-index:auto!important;
+    display:flex!important;
+    align-items:center;
+    justify-content:flex-end;
+    height:32px;
+    padding:0 0 6px!important;
+    margin:0 0 8px!important;
+    border:0!important;
+  }
+  .sidebar-head .clay-icon-btn{width:32px;height:32px;min-width:32px}
+  .search-field{margin-top:0!important}
+  .search-field input{padding-right:12px!important}
+}
