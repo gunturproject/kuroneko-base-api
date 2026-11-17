@@ -119,6 +119,24 @@
             "description": "Isi 1 untuk response ringkas (postingan dibatasi 10, raw HTML dihilangkan). Default: lengkap."
           }
         ]
+      },
+      {
+        "name": "Instagram Profile Stalker",
+        "endpoint": "/api/stalker/instagram-profile",
+        "filename": "instagramProfile",
+        "method": "GET",
+        "params": [
+          {
+            "name": "username",
+            "required": true,
+            "description": "Username Instagram tanpa @ atau URL lengkap (contoh: instagram atau https://www.instagram.com/instagram/). Menggabungkan OG meta (nama, avatar, follower/following/post) dengan web_profile_info (bio, verified, private, kategori, bio links, highlight, postingan + likes/comments) bila tersedia. Anti rate-limit: cache CDN 5 menit + cache memory + coalescing + cooldown otomatis saat 429."
+          },
+          {
+            "name": "compact",
+            "required": false,
+            "description": "Isi 1 untuk response ringkas (postingan dibatasi 10, raw HTML/JSON dihilangkan). Default: lengkap."
+          }
+        ]
       }
     ],
     "maker": [
