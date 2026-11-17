@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
-import FormData from 'form-data';
 import sharp from 'sharp';
 
 /*
@@ -146,26 +145,20 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
 
         const form = new FormData();
         form.append('reqtype', 'fileupload');
-        form.append('fileToUpload', output, {
-            filename: `kuroneko-upscale-${Date.now()}.${EXT[format]}`,
-            contentType: mime
+        form.append('fileToUpload', new Blob([output], { type: mime }), `kuroneko-upscale-${Date.now()}.${EXT[format]}`);
+
+        const uploaded = await fetch('https://catbox.moe/user/api.php', {
+            method: 'POST',
+            body: form,
+            signal: AbortSignal.timeout(60000)
         });
 
-        const uploaded = await axios.post<string>('https://catbox.moe/user/api.php', form, {
-            headers: {
-                ...form.getHeaders(),
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-                Referer: 'https://catbox.moe/',
-                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9'
-            },
-            maxBodyLength: Infinity,
-            maxContentLength: Infinity,
-            timeout: 60000,
-            responseType: 'text'
-        });
+        if (!uploaded.ok) {
+            const body = await uploaded.text().catch(function () { return ''; });
+            throw new Error(`Catbox upload HTTP ${uploaded.status}: ${body.slice(0, 200)}`);
+        }
 
-        const result = String(uploaded.data ?? '').trim();
+        const result = (await uploaded.text()).trim();
         if (!/^https:\/\/(files|litterbox)\.catbox\.moe\/\S+$/.test(result)) {
             return res.status(502).json({
                 status: false,
