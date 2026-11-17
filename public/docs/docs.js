@@ -64,7 +64,7 @@ async function init() {
         if (intro) {
             intro.classList.add("in");
             intro.innerHTML = `
-                <p class="text-sm font-bold" style="color:#B91C1C">
+                <p class="text-sm font-bold" style="color:var(--danger)">
                     Gagal memuat konfigurasi API. Coba muat ulang halaman.
                 </p>
             `;
@@ -551,11 +551,11 @@ function renderIntro(config) {
 
     el.innerHTML = `
         <div class="mb-5">
-            <h2 class="font-black text-xl" style="color:#1E1B4B">
+            <h2 class="font-black text-xl" style="color:var(--text)">
                 Introduction
             </h2>
 
-            <p class="text-xs font-bold" style="color:#94A3B8">
+            <p class="text-xs font-bold" style="color:var(--ogui-color-muted)">
                 Quick guide to using ${apiName}
             </p>
         </div>
@@ -577,13 +577,13 @@ function renderIntro(config) {
             </div>
         </div>
 
-        <p class="text-sm leading-relaxed font-semibold mb-7" style="color:#475569">
+        <p class="text-sm leading-relaxed font-semibold mb-7" style="color:var(--ogui-color-muted)">
             Welcome to the ${apiName} documentation.
             Browse endpoints grouped by category from the menu,
             then select one to view its details and try it out directly from here.
         </p>
 
-        <h3 class="font-black text-sm mb-2" style="color:#1E1B4B">
+        <h3 class="font-black text-sm mb-2" style="color:var(--text)">
             Example Usage
         </h3>
 
@@ -593,7 +593,7 @@ function renderIntro(config) {
 
         <div class="intro-code" id="example-code"></div>
 
-        <h3 class="font-black text-sm mb-3" style="color:#1E1B4B">
+        <h3 class="font-black text-sm mb-3" style="color:var(--text)">
             Response Format
         </h3>
 
@@ -626,7 +626,7 @@ function renderIntro(config) {
             </div>
         </div>
 
-        <h3 class="font-black text-sm mb-3 mt-7" style="color:#1E1B4B">
+        <h3 class="font-black text-sm mb-3 mt-7" style="color:var(--text)">
             Status Codes
         </h3>
 
@@ -676,7 +676,7 @@ function buildSidebarTree(tags) {
     introBtn.innerHTML = `
         <div
             class="folder-icon"
-            style="background:linear-gradient(135deg,#60A5FA,#1D4ED8)"
+            style="background:linear-gradient(135deg,var(--t1),var(--t2))"
         >
             <i class="fa-solid fa-house"></i>
         </div>
@@ -880,12 +880,12 @@ function renderEndpointCard(route, id) {
                             <div>
                                 <label
                                     class="text-[11px] font-bold mb-1.5 block"
-                                    style="color:#64748B"
+                                    style="color:var(--ogui-color-muted)"
                                 >
                                     ${param.name}
                                     ${
                                         param.required
-                                            ? '<span style="color:#FB7185">*</span>'
+                                            ? '<span style="color:var(--d3)">*</span>'
                                             : ""
                                     }
                                 </label>
@@ -912,7 +912,7 @@ function renderEndpointCard(route, id) {
 
     const descHtml = route.description
         ? `
-            <p class="text-xs font-semibold mt-3 leading-relaxed" style="color:#64748B">
+            <p class="text-xs font-semibold mt-3 leading-relaxed" style="color:var(--ogui-color-muted)">
                 ${route.description}
             </p>
         `
@@ -923,7 +923,7 @@ function renderEndpointCard(route, id) {
             <div class="p-5">
                 <div
                     class="flex items-center gap-2 mb-3 text-[11px] font-bold"
-                    style="color:#A78BFA"
+                    style="color:var(--ogui-color-accent)"
                 >
                     <i class="fa-solid fa-folder text-[10px]"></i>
                     <span>${route.cat}</span>
@@ -941,7 +941,7 @@ function renderEndpointCard(route, id) {
 
                         <span
                             class="text-[11px] font-semibold"
-                            style="color:#94A3B8"
+                            style="color:var(--ogui-color-muted)"
                         >
                             ${route.name}
                         </span>
@@ -955,7 +955,7 @@ function renderEndpointCard(route, id) {
 
             <div
                 class="px-5 pb-5 flex gap-3 items-center border-t pt-4"
-                style="border-color:#F1F5F9"
+                style="border-color:var(--glass-line)"
             >
                 <button
                     id="btn-exec-${id}"
