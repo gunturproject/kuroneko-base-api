@@ -81,6 +81,24 @@
             "description": "Isi 1 untuk response ringkas (tanpa raw scopes penuh & i18n). Default: lengkap."
           }
         ]
+      },
+      {
+        "name": "Roblox Profile Stalker",
+        "endpoint": "/api/download/roblox-profile",
+        "filename": "robloxProfile",
+        "method": "GET",
+        "params": [
+          {
+            "name": "username",
+            "required": true,
+            "description": "Username Roblox atau userId, juga menerima URL lengkap (contoh: jandel, 10916243, atau https://www.roblox.com/id/users/10916243/profile). Mengembalikan profil, statistik (friend/follower/following/group), avatar, presence/online status, group & role, experience, derived metrics, dan cross-check akurasi."
+          },
+          {
+            "name": "compact",
+            "required": false,
+            "description": "Isi 1 untuk response ringkas (group & experience dipotong, raw search dihilangkan). Default: lengkap."
+          }
+        ]
       }
     ],
     "maker": [
