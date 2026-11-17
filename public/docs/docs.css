@@ -140,3 +140,8 @@
   background:linear-gradient(90deg,transparent,rgb(167 139 250 / .38) 22%,rgb(167 139 250 / .38) 78%,transparent);
   pointer-events:none;
 }
+
+/* The endpoint list scrolls inside the drawer; keep it from chaining to the
+   page behind and causing the whole view to shift while the menu is open. */
+.sidebar,.sidebar-tree{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sidebar-overlay{overscroll-behavior:contain}

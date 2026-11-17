@@ -11,3 +11,6 @@ body::before{display:none!important}
 .site-header,.stats-nav{
   background:linear-gradient(180deg,#13102b,#0c0a1c)!important;
 }
+
+/* Stop scroll chaining / rubber-band from leaking through the drawer. */
+html,body{overscroll-behavior:none}
