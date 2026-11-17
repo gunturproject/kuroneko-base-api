@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KuroNeko | 404 Not Found</title>
+<link rel="stylesheet" href="/assets/open-glass-ui.css">
+<link rel="stylesheet" href="/assets/glass-theme.css">
+<link rel="stylesheet" href="/404.css">
+</head>
+<body class="ogui-theme ogui-app" data-ogui-theme="" data-ogui-design="liquid" data-ogui-appearance="dark" data-ogui-motion="on">
+
+<div class="bg-blobs" aria-hidden="true">
+<div class="blob blob-a"></div>
+<div class="blob blob-b"></div>
+<div class="blob blob-c"></div>
+</div>
+
+<main class="notfound-wrap">
+    <div class="ogui-card notfound-card reveal">
+        <div class="notfound-glyph ogui-badge" data-tone="accent">404</div>
+        <div class="ogui-card__eyebrow">LOST IN THE GLASS</div>
+        <div class="ogui-card__title">Halaman tidak ditemukan</div>
+        <div class="ogui-card__body">
+            Rute yang kamu tuju tidak ada di KuroNeko API.
+            Coba kembali ke beranda atau lihat dokumentasi endpoint yang tersedia.
+        </div>
+        <div class="ogui-card__footer notfound-actions">
+            <a href="/" class="ogui-button ogui-button--primary ogui-control--medium">Ke Beranda</a>
+            <a href="/docs" class="ogui-button ogui-control--medium">Lihat Docs</a>
+        </div>
+    </div>
+</main>
+
+<script>
+    requestAnimationFrame(() => document.querySelector('.reveal')?.classList.add('in'));
+</script>
+</body>
+</html>

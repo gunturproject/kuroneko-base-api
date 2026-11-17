@@ -92,28 +92,39 @@ function startWIBClock() {
     const timeEl = document.getElementById("server-time");
     const dateEl = document.getElementById("server-date");
 
-    updateTime();
-    setInterval(updateTime, 1000);
+    // Reuse Intl formatters — constructing them every second is expensive.
+    const timeFmt = new Intl.DateTimeFormat("id-ID", {
+        timeZone: "Asia/Jakarta",
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+    });
+    const dateFmt = new Intl.DateTimeFormat("id-ID", {
+        timeZone: "Asia/Jakarta",
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
 
+    // Align to the next second boundary so ticks stay smooth, and skip work
+    // entirely while the tab is hidden.
     function updateTime() {
+        if (document.hidden) return;
         const now = new Date();
+        const time = timeFmt.format(now);
+        const date = dateFmt.format(now);
 
-        if (timeEl) {
-            timeEl.innerText = now.toLocaleTimeString("id-ID", {
-                timeZone: "Asia/Jakarta",
-                hour12: false
-            });
-        }
-
-        if (dateEl) {
-            dateEl.innerText = now.toLocaleDateString("id-ID", {
-                timeZone: "Asia/Jakarta",
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
-            });
-        }
+        if (timeEl && timeEl.textContent !== time) timeEl.textContent = time;
+        if (dateEl && dateEl.textContent !== date) dateEl.textContent = date;
     }
+
+    updateTime();
+    const tick = () => {
+        updateTime();
+        setTimeout(tick, 1000 - (Date.now() % 1000) + 4);
+    };
+    setTimeout(tick, 1000 - (Date.now() % 1000) + 4);
 }
 
 async function initBattery() {
@@ -498,7 +509,7 @@ function renderIntro(config) {
         .map(
             (lang, i) => `
                 <button
-                    class="lang-tab ${i === 0 ? "active" : ""}"
+                    class="lang-tab ogui-button ogui-control--small ${i === 0 ? "active" : ""}"
                     data-lang="${lang}"
                     onclick="switchLangTab('${lang}')"
                 >
@@ -536,17 +547,17 @@ function renderIntro(config) {
         </div>
 
         <div class="intro-stats">
-            <div class="intro-stat">
+            <div class="intro-stat ogui-stat">
                 <b>${totalEndpoints}</b>
                 <span>Endpoint</span>
             </div>
 
-            <div class="intro-stat">
+            <div class="intro-stat ogui-stat">
                 <b>${cats.length}</b>
                 <span>Kategori</span>
             </div>
 
-            <div class="intro-stat">
+            <div class="intro-stat ogui-stat">
                 <b>${apiVersion}</b>
                 <span>Versi</span>
             </div>
@@ -575,7 +586,7 @@ function renderIntro(config) {
         <div class="resp-examples">
             <div class="resp-card">
                 <div class="resp-head">
-                    <span class="resp-badge ok">200 OK</span>
+                    <span class="resp-badge ogui-badge ok">200 OK</span>
                     <span class="resp-label">Success</span>
                 </div>
 
@@ -584,7 +595,7 @@ function renderIntro(config) {
 
             <div class="resp-card">
                 <div class="resp-head">
-                    <span class="resp-badge err">500 Internal Server Error</span>
+                    <span class="resp-badge ogui-badge err">500 Internal Server Error</span>
                     <span class="resp-label">Error</span>
                 </div>
 
@@ -593,7 +604,7 @@ function renderIntro(config) {
 
             <div class="resp-card">
                 <div class="resp-head">
-                    <span class="resp-badge limit">429 Too Many Requests</span>
+                    <span class="resp-badge ogui-badge limit">429 Too Many Requests</span>
                     <span class="resp-label">Rate Limited</span>
                 </div>
 
@@ -646,7 +657,7 @@ function buildSidebarTree(tags) {
     const introBtn = document.createElement("button");
 
     introBtn.id = "sidebar-intro-btn";
-    introBtn.className = "folder-btn intro-nav-btn active";
+    introBtn.className = "folder-btn ogui-button ogui-control--medium intro-nav-btn active";
 
     introBtn.innerHTML = `
         <div
@@ -676,7 +687,7 @@ function buildSidebarTree(tags) {
 
         wrap.innerHTML = `
             <button
-                class="folder-btn"
+                class="folder-btn ogui-button ogui-control--medium"
                 onclick="toggleFolder('${catId}')"
             >
                 <div class="folder-icon">
@@ -726,7 +737,7 @@ function buildSidebarTree(tags) {
 
             const btn = document.createElement("button");
 
-            btn.className = "file-item";
+            btn.className = "file-item ogui-button ogui-control--small";
             btn.id = `file-${id}`;
 
             btn.setAttribute(
@@ -735,7 +746,7 @@ function buildSidebarTree(tags) {
             );
 
             btn.innerHTML = `
-                <span class="mini-badge ${methodClass}">
+                <span class="mini-badge ogui-badge ${methodClass}">
                     ${route.method}
                 </span>
 
@@ -878,7 +889,7 @@ function renderEndpointCard(route, id) {
                                         param.description ||
                                         "Masukkan nilai..."
                                     }"
-                                    class="clay-input"
+                                    class="clay-input ogui-search"
                                     autocomplete="off"
                                 >
                             </div>
@@ -907,7 +918,7 @@ function renderEndpointCard(route, id) {
         : "";
 
     ev.innerHTML = `
-        <div class="ep-card reveal in">
+        <div class="ep-card ogui-card reveal in">
             <div class="p-5">
                 <div
                     class="flex items-center gap-2 mb-3 text-[11px] font-bold"
@@ -918,7 +929,7 @@ function renderEndpointCard(route, id) {
                 </div>
 
                 <div class="flex items-start gap-3">
-                    <span class="method-badge ${methodClass}">
+                    <span class="method-badge ogui-badge ${methodClass}">
                         ${route.method}
                     </span>
 
@@ -948,7 +959,7 @@ function renderEndpointCard(route, id) {
                 <button
                     id="btn-exec-${id}"
                     onclick="testReq(this,'${route.endpoint}','${route.method}','${id}')"
-                    class="clay-btn flex-1 h-11 text-[12px] tracking-wide"
+                    class="clay-btn ogui-button ogui-button--primary ogui-control--medium flex-1 h-11 text-[12px] tracking-wide"
                 >
                     <i class="fa-solid fa-play text-xs"></i>
                     EXECUTE
@@ -956,7 +967,7 @@ function renderEndpointCard(route, id) {
 
                 <button
                     onclick="copy('${copyUrl}')"
-                    class="clay-icon-btn"
+                    class="clay-icon-btn ogui-button ogui-control--medium ogui-icon-button"
                     title="Copy URL"
                     aria-label="Copy URL"
                 >

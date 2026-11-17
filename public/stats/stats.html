@@ -4,25 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>KuroNeko | Server Monitor</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/assets/tailwind.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/open-glass-ui.css">
 <link rel="stylesheet" href="/assets/glass-theme.css">
 <link rel="stylesheet" href="/stats/stats.css">
 </head>
-<body class="min-h-screen flex flex-col relative overflow-x-hidden" data-ogui-design="liquid" data-ogui-appearance="dark">
+<body class="ogui-theme ogui-app min-h-screen flex flex-col relative overflow-x-hidden" data-ogui-theme="" data-ogui-design="liquid" data-ogui-appearance="dark" data-ogui-motion="on">
 
-<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-<div class="blob w-[420px] h-[420px] bg-purple-300/25 top-[-8%] left-[10%]"></div>
-<div class="blob w-[380px] h-[380px] bg-teal-200/25 bottom-[-10%] right-[5%]"></div>
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+<div class="blob blob-a w-[420px] h-[420px] top-[-8%] left-[10%]"></div>
+<div class="blob blob-b w-[380px] h-[380px] bottom-[-10%] right-[5%]"></div>
 </div>
 
-<nav class="sticky top-0 z-[60] w-full">
+<nav class="sticky top-0 z-[60] w-full stats-nav">
 <div class="max-w-7xl mx-auto px-5 h-20 flex items-center gap-4 justify-between">
 <div class="flex items-center gap-3 shrink-0">
 <a href="/" class="clay-icon-btn ogui-button ogui-control--medium ogui-icon-button"><i class="fa-solid fa-arrow-left text-sm"></i></a>
-<h1 class="font-black text-lg tracking-tight uppercase" style="color:#1E1B4B">System Status</h1>
+<span class="ogui-badge stats-badge" data-tone="accent">LIVE</span>
+<h1 class="page-title">System Status</h1>
 </div>
 <a href="/docs" class="clay-link ogui-button ogui-control--medium">DOCS</a>
 </div>
@@ -31,23 +35,23 @@
 <main class="flex-grow max-w-7xl mx-auto w-full px-5 py-8 grid gap-6 relative z-10">
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div class="clay-stat-card reveal">
+<div class="clay-stat-card ogui-card reveal">
 <div class="flex items-center gap-4 mb-4">
-<div class="clay-stat-icon" style="--c:#34D399;--s:#059669"><i class="fa-solid fa-clock"></i></div>
+<div class="clay-stat-icon ogui-badge" data-tone="positive"><i class="fa-solid fa-clock"></i></div>
 <div>
-<h3 class="text-[11px] font-black uppercase tracking-widest" style="color:#94A3B8">Uptime</h3>
-<p id="uptime" class="font-mono font-black text-lg" style="color:#1E1B4B"><span class="inline-block h-5 w-24 clay-shimmer align-middle"></span></p>
+<h3 class="stat-label">Uptime</h3>
+<p id="uptime" class="stat-value font-mono"><span class="ogui-skeleton inline-block h-5 w-24 align-middle"></span></p>
 </div>
 </div>
-<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:#EDE9FE"><div class="h-full" style="background:#34D399;width:100%"></div></div>
+<div class="uptrack"><div class="upfill"></div></div>
 </div>
 
-<div class="clay-stat-card reveal">
+<div class="clay-stat-card ogui-card reveal">
 <div class="flex items-center gap-4 mb-4">
-<div class="clay-stat-icon" style="--c:#60A5FA;--s:#1D4ED8"><i class="fa-solid fa-server"></i></div>
+<div class="clay-stat-icon ogui-badge" data-tone="accent"><i class="fa-solid fa-server"></i></div>
 <div>
-<h3 class="text-[11px] font-black uppercase tracking-widest" style="color:#94A3B8">Platform</h3>
-<p id="platform" class="font-mono font-black text-lg" style="color:#1E1B4B"><span class="inline-block h-5 w-28 clay-shimmer align-middle"></span></p>
+<h3 class="stat-label">Platform</h3>
+<p id="platform" class="stat-value font-mono"><span class="ogui-skeleton inline-block h-5 w-28 align-middle"></span></p>
 </div>
 </div>
 <div class="flex gap-2 text-[10px] font-bold">
@@ -56,30 +60,35 @@
 </div>
 </div>
 
-<div class="clay-stat-card reveal">
+<div class="clay-stat-card ogui-card reveal">
 <div class="flex items-center gap-4 mb-4">
-<div class="clay-stat-icon" style="--c:#FB7185;--s:#BE123C"><i class="fa-solid fa-microchip"></i></div>
+<div class="clay-stat-icon ogui-badge" data-tone="danger"><i class="fa-solid fa-microchip"></i></div>
 <div>
-<h3 class="text-[11px] font-black uppercase tracking-widest" style="color:#94A3B8">CPU Load</h3>
-<p id="cpu-load" class="font-mono font-black text-lg" style="color:#1E1B4B">0%</p>
+<h3 class="stat-label">CPU Load</h3>
+<p id="cpu-load" class="stat-value font-mono">0%</p>
 </div>
 </div>
-<p id="cpu-model" class="text-[10px] font-mono font-semibold truncate" style="color:#94A3B8">Detecting...</p>
+<p id="cpu-model" class="stat-sub">Detecting...</p>
 </div>
 </div>
 
-<div class="clay-stat-card reveal">
-<h2 class="text-base font-black mb-6 flex items-center gap-2" style="color:#1E1B4B"><i class="fa-solid fa-memory" style="color:#A78BFA"></i> MEMORY USAGE</h2>
-<div class="mb-3 flex justify-between text-xs font-bold font-mono" style="color:#94A3B8">
-<span>USED: <span id="mem-used" style="color:#1E1B4B">0 GB</span></span>
-<span>TOTAL: <span id="mem-total" style="color:#1E1B4B">0 GB</span></span>
+<div class="clay-stat-card ogui-card reveal">
+<div class="mem-head">
+<h2 class="mem-title"><i class="fa-solid fa-memory"></i> Memory Usage</h2>
+<span class="ogui-badge" data-tone="accent">RAM</span>
 </div>
-<div class="mem-track mb-3">
+<div class="ogui-progress mem-progress">
+<span class="mem-labels">
+<span>USED: <strong id="mem-used" class="mem-value">0 GB</strong></span>
+<span>TOTAL: <strong id="mem-total" class="mem-value">0 GB</strong></span>
+</span>
+<div class="mem-track">
 <div id="ram-bar" class="mem-fill flex items-center justify-end pr-3">
 <span id="ram-percent" class="text-[10px] font-black text-white">0%</span>
 </div>
 </div>
-<p class="text-right text-[10px] font-black" style="color:#6D28D9">FREE: <span id="mem-free">0 GB</span></p>
+</div>
+<p class="mem-free">FREE: <strong id="mem-free" class="mem-value">0 GB</strong></p>
 </div>
 
 </main>

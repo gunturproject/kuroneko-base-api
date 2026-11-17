@@ -4,19 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KuroNeko | Documents</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/assets/tailwind.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/open-glass-ui.css">
 <link rel="stylesheet" href="/assets/glass-theme.css">
 <link rel="stylesheet" href="/docs/docs.css">
 </head>
-<body class="min-h-screen flex flex-col relative" data-ogui-design="liquid" data-ogui-appearance="dark">
+<body class="ogui-theme ogui-app min-h-screen flex flex-col relative" data-ogui-theme="" data-ogui-design="liquid" data-ogui-appearance="dark" data-ogui-motion="on">
 
-<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-    <div class="blob w-[420px] h-[420px] bg-purple-300/25 top-[-8%] left-[10%]"></div>
-    <div class="blob w-[380px] h-[380px] bg-blue-300/25 top-[20%] right-[5%]"></div>
-    <div class="blob w-[460px] h-[460px] bg-teal-200/20 bottom-[-10%] left-[25%]"></div>
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+    <div class="blob blob-a w-[420px] h-[420px] top-[-8%] left-[10%]"></div>
+    <div class="blob blob-b w-[380px] h-[380px] top-[20%] right-[5%]"></div>
+    <div class="blob blob-c w-[460px] h-[460px] bottom-[-10%] left-[25%]"></div>
 </div>
 
 <header id="site-header" class="site-header">
@@ -27,18 +30,18 @@
 
         <div class="brand">
             <div class="min-w-0">
+                <span class="ogui-badge brand-badge" data-tone="accent">API PLATFORM</span>
                 <h1 id="nav-title" class="brand-title">KURONEKO</h1>
-                <span class="brand-sub">API PLATFORM</span>
+                <span class="brand-sub">DOCUMENTATION</span>
             </div>
         </div>
 
-        <div class="header-actions">
+        <div class="header-actions ogui-toolbar" role="toolbar" aria-label="Aksi cepat" aria-orientation="horizontal" data-orientation="horizontal" data-ogui-glass="" data-ogui-design="liquid" data-ogui-material="regular" data-ogui-tone="auto">
             <a href="/" class="clay-icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="Kembali ke Beranda">
                 <i class="fa-solid fa-house text-sm"></i>
             </a>
-
             <a href="https://github.com/DanzzAraAra" target="_blank" rel="noopener" class="clay-icon-btn ogui-button ogui-control--medium ogui-icon-button" aria-label="Source Code">
-                <i class="fa-brands fa-github text-lg" style="color:#1E1B4B"></i>
+                <i class="fa-brands fa-github text-lg brand-github-icon"></i>
             </a>
         </div>
     </div>
@@ -55,21 +58,22 @@
             </button>
         </div>
 
-        <div class="relative mb-4">
-            <input type="text" id="search-input" placeholder="Cari endpoint..." class="clay-input pl-11 h-11">
-            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs" style="color:#A78BFA"></i>
+        <div class="ogui-field search-field relative">
+            <span class="ogui-sr-only">Cari endpoint</span>
+            <input type="text" id="search-input" placeholder="Cari endpoint..." class="clay-input ogui-search pl-11 h-11">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
         </div>
 
         <div id="sidebar-tree" class="sidebar-tree"></div>
 
         <div id="no-results" class="hidden flex-col items-center justify-center py-8 text-center">
-            <i class="fa-solid fa-magnifying-glass text-2xl mb-2" style="color:#C4B5FD"></i>
-            <p class="font-bold text-sm" style="color:#1E1B4B">Endpoint tidak ditemukan</p>
+            <i class="fa-solid fa-magnifying-glass no-results-icon"></i>
+            <p class="font-bold text-sm no-results-text">Endpoint tidak ditemukan</p>
         </div>
 
         <div class="sidebar-foot">
-            <p class="font-mono text-[10px] font-semibold uppercase tracking-widest" style="color:#94A3B8">
-                Powered by <span style="color:#6D28D9">Danzz</span> &bull; 2026
+            <p class="font-mono text-[10px] font-semibold uppercase tracking-widest sidebar-foot-text">
+                Powered by <span class="sidebar-foot-accent">Danzz</span> &bull; 2026
             </p>
         </div>
     </aside>
@@ -78,69 +82,54 @@
         <div class="content-stack">
 
             <div class="top-row">
-                <div class="clay-console reveal">
+                <div class="clay-console ogui-card reveal">
                     <div class="clay-console-screen term-screen">
-                        <div class="px-4 py-3 flex items-center gap-2 border-b border-white/10">
-                            <div class="flex gap-2">
-                                <div class="w-3 h-3 rounded-full" style="background:#FB7185"></div>
-                                <div class="w-3 h-3 rounded-full" style="background:#FCD34D"></div>
-                                <div class="w-3 h-3 rounded-full" style="background:#34D399"></div>
+                        <div class="term-head">
+                            <div class="term-dots">
+                                <span class="term-dot term-dot-red"></span>
+                                <span class="term-dot term-dot-amber"></span>
+                                <span class="term-dot term-dot-green"></span>
                             </div>
-
-                            <span class="flex-1 text-center text-[10px] font-bold tracking-widest text-slate-400">
-                                root@kuroneko ~
-                            </span>
+                            <span class="term-title">root@kuroneko ~</span>
                         </div>
 
                         <div id="term-logs" class="font-mono p-4 text-[11px] overflow-y-auto flex-1 space-y-1.5 leading-relaxed"></div>
 
                         <div id="term-input-line" class="hidden px-4 pb-3 pt-2 border-t border-white/10 font-mono">
-                            <span class="text-emerald-400 font-bold mr-2">➜</span>
-                            <span class="text-sky-400 font-bold mr-2">~</span>
+                            <span class="term-prompt">➜</span>
+                            <span class="term-path">~</span>
                             <span class="inline-block w-2 h-4 bg-slate-400 align-middle blink-cursor"></span>
                         </div>
                     </div>
                 </div>
 
-                <div class="clay-card stats-card p-4 sm:p-5 reveal">
+                <div class="clay-card ogui-card stats-card p-4 sm:p-5 reveal">
                     <div class="stat-grid">
-                        <div class="stat-tile">
-                            <span class="stat-label">
-                                <i class="fa-regular fa-clock" style="color:#60A5FA"></i>
-                                WAKTU (WIB)
-                            </span>
-                            <span id="server-time" class="stat-value font-mono">--:--:--</span>
+                        <div class="ogui-stat stat-tile">
+                            <span class="stat-label"><i class="fa-regular fa-clock"></i> WAKTU (WIB)</span>
+                            <strong id="server-time" class="stat-value font-mono">--:--:--</strong>
                         </div>
 
-                        <div class="stat-tile">
-                            <span class="stat-label">
-                                <i class="fa-regular fa-calendar" style="color:#60A5FA"></i>
-                                TANGGAL
-                            </span>
-                            <span id="server-date" class="stat-value font-mono">--/--/----</span>
+                        <div class="ogui-stat stat-tile">
+                            <span class="stat-label"><i class="fa-regular fa-calendar"></i> TANGGAL</span>
+                            <strong id="server-date" class="stat-value font-mono">--/--/----</strong>
                         </div>
 
-                        <div class="stat-tile">
-                            <span class="stat-label">
-                                <i class="fa-solid fa-battery-half" style="color:#A78BFA"></i>
-                                BATERAI
-                            </span>
-                            <span id="stat-battery" class="stat-value accent font-mono">--%</span>
+                        <div class="ogui-stat stat-tile">
+                            <span class="stat-label"><i class="fa-solid fa-battery-half"></i> BATERAI</span>
+                            <strong id="stat-battery" class="stat-value accent font-mono">--%</strong>
                         </div>
 
-                        <div class="stat-tile">
-                            <span class="stat-label">
-                                <i class="fa-solid fa-mobile-screen" style="color:#A78BFA"></i>
-                                DEVICE
-                            </span>
-                            <span id="stat-device" class="stat-value accent">Unknown</span>
+                        <div class="ogui-stat stat-tile">
+                            <span class="stat-label"><i class="fa-solid fa-mobile-screen"></i> DEVICE</span>
+                            <strong id="stat-device" class="stat-value accent">Unknown</strong>
                         </div>
                     </div>
                 </div>
             </div>
 
             <section id="content-col" class="content-col">
-                <div id="intro-view" class="clay-card p-5 sm:p-7 reveal"></div>
+                <div id="intro-view" class="clay-card ogui-card p-5 sm:p-7 reveal"></div>
                 <div id="endpoint-view" class="hidden flex-col gap-4"></div>
             </section>
 
@@ -150,14 +139,9 @@
 </div>
 
 <div id="custom-toast" class="toast-wrap transform translate-y-32 opacity-0 transition-all duration-300">
-    <div class="toast-box">
-        <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="background:rgba(52,211,153,.2);color:#34D399">
-            <i class="fa-solid fa-check text-xs"></i>
-        </div>
-
-        <span id="toast-message" class="tracking-wide text-white font-bold text-sm">
-            SUCCESS
-        </span>
+    <div class="toast-box ogui-alert" role="status" data-tone="positive">
+        <span class="toast-check ogui-alert__signal" aria-hidden="true"><i class="fa-solid fa-check text-xs"></i></span>
+        <div><strong id="toast-message" class="tracking-wide text-sm">SUCCESS</strong></div>
     </div>
 </div>
 

@@ -12,6 +12,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import type { ServeStaticOptions } from 'serve-static';
 import { rateLimit } from './src/middleware/rateLimit';
 import { errorHandler } from './src/middleware/errorHandler';
 import {
@@ -98,8 +99,24 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next();
 });
 
-app.use(express.static(path.join(process.cwd(), 'public')));
-app.use('/src', express.static(path.join(process.cwd(), 'src')));
+const staticOptions: ServeStaticOptions = {
+    etag: true,
+    lastModified: true,
+    maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+    setHeaders: (res, filePath) => {
+        if (/\.(?:css|js|mjs|woff2?|png|jpe?g|gif|svg|webp|ico)$/.test(filePath)) {
+            res.setHeader(
+                'Cache-Control',
+                'public, max-age=3600, stale-while-revalidate=86400'
+            );
+        } else if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+    }
+};
+
+app.use(express.static(path.join(process.cwd(), 'public'), staticOptions));
+app.use('/src', express.static(path.join(process.cwd(), 'src'), staticOptions));
 
 app.use(rateLimit); // rate limiter
 loadRouter(app, config); // endpoints router

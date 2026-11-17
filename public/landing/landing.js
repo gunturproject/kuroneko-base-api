@@ -1,4 +1,5 @@
-const minLoadTime=800;
+/* Keep the skeleton brief — long artificial delays make the UI feel slow. */
+const minLoadTime=200;
 const startLoad=Date.now();
 const prefersReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

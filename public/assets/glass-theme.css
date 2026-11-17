@@ -8,21 +8,47 @@
 :root {
     color-scheme: dark;
 
-    --ogui-color-accent: #a78bfa;
-    --ogui-color-accent-ink: #180d33;
-    --ogui-color-focus: #d8ccff;
+    /* OpenGlass theme tokens — dark / liquid / violet accent. */
+    --ogui-color-background: #08070f;
+    --ogui-color-canvas: #0b0918;
+    --ogui-color-surface: #0b0918;
+    --ogui-color-surface-strong: rgb(255 255 255 / 0.12);
     --ogui-color-text: #f7f6ff;
     --ogui-color-muted: #c3bce0;
     --ogui-color-border: rgb(255 255 255 / 0.18);
+    --ogui-color-border-strong: rgb(255 255 255 / 0.32);
     --ogui-color-control: rgb(255 255 255 / 0.08);
     --ogui-color-control-hover: rgb(255 255 255 / 0.14);
+    --ogui-color-control-active: rgb(255 255 255 / 0.2);
+    --ogui-color-accent: #a78bfa;
+    --ogui-color-accent-ink: #180d33;
+    --ogui-color-accent-soft: rgb(167 139 250 / 0.16);
+    --ogui-color-accent-highlight-mix: 16%;
+    --ogui-color-secondary: #c4b5fd;
+    --ogui-color-tertiary: #8d86ad;
+    --ogui-color-focus: #d8ccff;
+    --ogui-color-danger: #ff8176;
+    --ogui-color-danger-ink: #180d33;
+    --ogui-color-success: #58d79e;
+    --ogui-color-success-ink: #180d33;
+    --ogui-color-warning: #f1c75b;
+    --ogui-color-warning-ink: #180d33;
+    --ogui-radius-capsule: 999px;
     --ogui-radius-surface: 1.35rem;
     --ogui-radius-control: 0.85rem;
 
+    /* Liquid material / glass look. */
+    --ogui-lg-fill: rgb(255 255 255 / 0.1);
+    --ogui-lg-fill-hover: rgb(255 255 255 / 0.16);
+    --ogui-lg-fill-active: rgb(255 255 255 / 0.22);
+    --ogui-lg-thumb: rgb(255 255 255 / 0.2);
+    --ogui-lg-well: rgb(0 0 0 / 0.22);
+    --ogui-lg-hairline: rgb(255 255 255 / 0.12);
     --ogui-glass-blur: 1.15;
     --ogui-glass-opacity: 1;
     --ogui-glass-saturation: 1.15;
     --ogui-glass-rim: 1.15;
+    --ogui-glass-tint-dark: #100c26;
     --ogui-glass-light-angle: 330deg;
 
     --glass-ink: #f7f6ff;
@@ -49,7 +75,6 @@ body {
         radial-gradient(110% 90% at 92% 18%, rgb(14 165 233 / 0.18), transparent 55%),
         radial-gradient(120% 100% at 60% 100%, rgb(236 72 153 / 0.18), transparent 60%),
         linear-gradient(160deg, #0c0a1c 0%, #100c26 48%, #080716 100%);
-    background-attachment: fixed;
 }
 
 .font-mono,
@@ -70,28 +95,26 @@ button, input { font: inherit; }
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
-    background:
-        radial-gradient(120% 90% at 12% 8%, rgb(124 58 237 / 0.34), transparent 58%),
-        radial-gradient(110% 90% at 92% 18%, rgb(14 165 233 / 0.22), transparent 55%),
-        radial-gradient(120% 100% at 60% 100%, rgb(236 72 153 / 0.2), transparent 60%),
-        linear-gradient(160deg, #0c0a1c 0%, #100c26 48%, #080716 100%);
+    contain: strict;
 }
 
+/* Radial gradients give the same soft glow as filter: blur(70px) without
+   forcing a full layer repaint on every animation frame. */
 .blob {
     position: absolute;
-    border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
-    filter: blur(70px);
-    opacity: 0.5;
-    animation: glass-drift 18s ease-in-out infinite alternate;
+    border-radius: 50%;
+    opacity: 0.42;
+    will-change: transform;
+    animation: glass-drift 24s ease-in-out infinite alternate;
 }
 
-.blob-a { width: 34vw; height: 34vw; min-width: 300px; min-height: 300px; background: #8b5cf6; top: -12%; left: -8%; }
-.blob-b { width: 30vw; height: 30vw; min-width: 260px; min-height: 260px; background: #22d3ee; top: 16%; right: -10%; animation-delay: -6s; }
-.blob-c { width: 36vw; height: 36vw; min-width: 320px; min-height: 320px; background: #f472b6; bottom: -18%; left: 18%; animation-delay: -12s; }
+.blob-a { width: 34vw; height: 34vw; min-width: 300px; min-height: 300px; background: radial-gradient(circle, rgb(139 92 246 / 0.9), transparent 70%); top: -12%; left: -8%; }
+.blob-b { width: 30vw; height: 30vw; min-width: 260px; min-height: 260px; background: radial-gradient(circle, rgb(34 211 238 / 0.85), transparent 70%); top: 16%; right: -10%; animation-delay: -8s; }
+.blob-c { width: 36vw; height: 36vw; min-width: 320px; min-height: 320px; background: radial-gradient(circle, rgb(244 114 182 / 0.8), transparent 70%); bottom: -18%; left: 18%; animation-delay: -16s; }
 
 @keyframes glass-drift {
-    from { transform: translate3d(0, 0, 0) scale(1); }
-    to { transform: translate3d(4vw, 3vh, 0) scale(1.14); }
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(4vw, 3vh, 0); }
 }
 
 /* ------------------------------------------------------------- glass pieces */
@@ -122,10 +145,10 @@ button, input { font: inherit; }
     align-items: center;
     gap: 0.4rem;
     padding: 0.35rem 0.7rem;
-    border: 1px solid var(--glass-line);
+    border: 1px solid var(--ogui-hairline);
     border-radius: 999px;
-    background: var(--glass-fill);
-    color: var(--glass-ink);
+    background: var(--ogui-control);
+    color: var(--ogui-ink);
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.04em;
