@@ -244,7 +244,7 @@ async function kuroneko(config) {
     const allRoutes = [];
 
     for (const cat in config.tags) {
-        config.tags[cat].forEach(route => {
+        sortRoutes(config.tags[cat]).forEach(route => {
             allRoutes.push({ cat, ...route });
         });
     }
@@ -296,6 +296,20 @@ function getMethodClass(method) {
     if (method === "POST") return "post";
     if (method === "DELETE") return "delete";
     return "other";
+}
+
+const METHOD_ORDER = { GET: 0, POST: 1, DELETE: 2 };
+
+function sortRoutes(routes) {
+    return [...routes].sort((a, b) => {
+        const ma = METHOD_ORDER[a.method] ?? 3;
+        const mb = METHOD_ORDER[b.method] ?? 3;
+
+        return (
+            ma - mb ||
+            String(a.endpoint).localeCompare(String(b.endpoint))
+        );
+    });
 }
 
 function buildExampleSnippets(origin, endpoint) {
@@ -679,7 +693,8 @@ function buildSidebarTree(tags) {
 
     tree.appendChild(introBtn);
 
-    for (const [cat, routes] of Object.entries(tags)) {
+    for (const [cat, rawRoutes] of Object.entries(tags)) {
+        const routes = sortRoutes(rawRoutes);
         const catId = `cat-${cat.replace(/\s+/g, "-")}`;
         const wrap = document.createElement("div");
 
@@ -914,7 +929,7 @@ function renderEndpointCard(route, id) {
                     <span>${route.cat}</span>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="ep-head">
                     <span class="method-badge ogui-badge ${methodClass}">
                         ${route.method}
                     </span>
