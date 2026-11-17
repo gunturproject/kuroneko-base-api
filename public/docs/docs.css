@@ -50,6 +50,7 @@
 }
 .search-field .ogui-sr-only{display:none!important}
 .search-field .search-icon{
+  order:-1;
   position:static!important;
   top:auto!important;
   left:auto!important;
