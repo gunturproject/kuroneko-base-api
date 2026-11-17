@@ -11,5 +11,23 @@
         "description": "Facebook URL"
       }
     ]
+  },
+  {
+    "name": "TikTok Downloader (No Watermark)",
+    "endpoint": "/api/download/tiktok",
+    "filename": "tiktok",
+    "method": "GET",
+    "params": [
+      {
+        "name": "url",
+        "required": true,
+        "description": "TikTok video URL (boleh short link vt.tiktok.com / vm.tiktok.com)"
+      },
+      {
+        "name": "hd",
+        "required": false,
+        "description": "Isi 1 untuk mengambil link kualitas HD (jika tersedia)"
+      }
+    ]
   }
 ]
