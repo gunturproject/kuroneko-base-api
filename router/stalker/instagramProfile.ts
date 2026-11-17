@@ -370,14 +370,23 @@ function errorSnapshot(
     };
 }
 
-async function loadSnapshot(username: string): Promise<Snapshot> {
+async function loadSnapshot(
+    username: string,
+    cacheKey: string,
+    withApi: boolean
+): Promise<Snapshot> {
     const profileUrl = `https://www.instagram.com/${username}/`;
-    const cached = snapshotCache.get(username);
+    const cached = snapshotCache.get(cacheKey);
     const stale = cached && Date.now() < cached.staleUntil ? cached.snapshot : null;
     const common = {
         timeout: 20000,
         maxContentLength: 12 * 1024 * 1024,
         maxBodyLength: 12 * 1024 * 1024
+    };
+    const fbHeaders = {
+        'User-Agent': FB_UA,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9'
     };
 
     const statuses: Record<string, string> = {};
@@ -386,37 +395,54 @@ async function loadSnapshot(username: string): Promise<Snapshot> {
 
     let ogHtml = '';
     let ogMeta: Meta = {};
-    let ogResult: PromiseSettledResult<unknown> | null = null;
+    let isNotFound = false;
 
-    if (Date.now() < ogCooldownUntil) {
-        statuses.og_profile_page = 'cooldown';
-        httpInfo.og_profile_page = { ok: false, error: 'cooldown' };
-    } else {
-        ogResult = await settledGet(profileUrl, {
-            ...common,
-            responseType: 'text',
-            headers: {
-                'User-Agent': FB_UA,
-                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9'
-            }
-        });
-        statuses.og_profile_page = statusOf(ogResult);
-        httpInfo.og_profile_page = httpOf(ogResult);
-        ogHtml = ogResult.status === 'fulfilled' ? String((ogResult.value as any)?.data ?? '') : '';
-        ogMeta = pickMeta(ogHtml);
-        if (isRateLimited(ogResult)) ogCooldownUntil = Date.now() + OG_COOLDOWN;
-        if (ogMetaExists(ogHtml)) sources.push('og_profile_page');
+    const tryOg = async (url: string, label: string) => {
+        if (Date.now() < ogCooldownUntil) {
+            statuses[label] = 'cooldown';
+            httpInfo[label] = { ok: false, error: 'cooldown' };
+            return '';
+        }
+        const result = await settledGet(url, { ...common, responseType: 'text', headers: fbHeaders });
+        statuses[label] = statusOf(result);
+        httpInfo[label] = httpOf(result);
+        const html = result.status === 'fulfilled' ? String((result.value as any)?.data ?? '') : '';
+        if (isRateLimited(result)) ogCooldownUntil = Date.now() + OG_COOLDOWN;
+        if (ogMetaExists(html)) {
+            ogHtml = html;
+            ogMeta = pickMeta(html);
+            if (!sources.includes(label)) sources.push(label);
+        } else if (notFoundPage(html)) {
+            isNotFound = true;
+            if (!ogHtml) ogHtml = html;
+        }
+        return html;
+    };
+
+    await tryOg(profileUrl, 'og_profile_page');
+
+    // Vercel/datacenter IP kadang dilayani halaman generik. Coba host alternatif
+    // hanya kalau halaman utama tidak memberi OG meta dan bukan 429.
+    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
+        await tryOg(`https://instagram.com/${username}/`, 'og_profile_page_alt1');
+    }
+    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
+        await tryOg(`https://m.instagram.com/${username}/`, 'og_profile_page_alt2');
+    }
+    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
+        await sleep(600);
+        await tryOg(
+            `${profileUrl}?_igst=${Date.now()}`,
+            'og_profile_page_retry'
+        );
     }
 
     let apiJson: any = null;
     let apiUser: any = null;
     let apiResult: PromiseSettledResult<unknown> | null = null;
 
-    if (Date.now() < apiCooldownUntil) {
-        statuses.web_profile_info = 'cooldown';
-        httpInfo.web_profile_info = { ok: false, error: 'cooldown' };
-    } else {
+    // Compact sengaja tidak memanggil API: ini pembeda utama anti rate-limit.
+    if (withApi && Date.now() >= apiCooldownUntil) {
         apiResult = await settledGet(
             `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
             {
@@ -439,46 +465,32 @@ async function loadSnapshot(username: string): Promise<Snapshot> {
         } else if (apiUser) {
             sources.push('web_profile_info');
         }
-    }
-
-    const isNotFound = notFoundPage(ogHtml);
-    const needsRetry = !ogMetaExists(ogHtml) && !isNotFound && !apiUser && Date.now() >= ogCooldownUntil;
-
-    if (needsRetry) {
-        await sleep(600);
-        const retry = await settledGet(`${profileUrl}?_igst=${Date.now()}`, {
-            ...common,
-            responseType: 'text',
-            headers: {
-                'User-Agent': FB_UA,
-                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        statuses.og_profile_page_retry = statusOf(retry);
-        httpInfo.og_profile_page_retry = httpOf(retry);
-        const retryHtml = retry.status === 'fulfilled' ? String((retry.value as any)?.data ?? '') : '';
-        if (ogMetaExists(retryHtml)) {
-            ogHtml = retryHtml;
-            ogMeta = pickMeta(retryHtml);
-            ogResult = retry;
-            if (!sources.includes('og_profile_page')) sources.push('og_profile_page');
-        }
-        if (isRateLimited(retry)) ogCooldownUntil = Date.now() + OG_COOLDOWN;
+    } else if (withApi) {
+        statuses.web_profile_info = 'cooldown';
+        httpInfo.web_profile_info = { ok: false, error: 'cooldown' };
+    } else {
+        statuses.web_profile_info = 'skipped_compact';
+        httpInfo.web_profile_info = { ok: false, error: 'skipped_compact' };
     }
 
     const detail = {
         og_title: ogMeta['og:title'] || null,
+        og_status: statuses.og_profile_page || null,
+        og_fallback_statuses: Object.entries(statuses)
+            .filter(([key]) => key.startsWith('og_profile_page_'))
+            .map(([key, value]) => `${key}:${value}`),
+        og_bytes: ogHtml.length,
+        og_page_id: (ogHtml.match(/"pageID"\s*:\s*"([^"]+)"/i) || [])[1] || null,
+        og_title_tag: (ogHtml.match(/<title>([^<]*)<\/title>/i) || [])[1] || null,
         not_found_page: isNotFound,
-        api_status: apiResult ? statusOf(apiResult) : 'cooldown',
+        api_status: apiResult ? statusOf(apiResult) : withApi ? 'cooldown' : 'skipped_compact',
         api_cooldown_active: Date.now() < apiCooldownUntil
     };
 
     if (!ogMetaExists(ogHtml) && !apiUser) {
         if (isNotFound) {
             return remember(
-                username,
+                cacheKey,
                 errorSnapshot(
                     404,
                     `Username Instagram '@${username}' tidak ditemukan atau tidak tersedia.`,
@@ -489,15 +501,10 @@ async function loadSnapshot(username: string): Promise<Snapshot> {
             );
         }
         if (stale) {
-            return {
-                ...stale,
-                servedFrom: 'stale',
-                stale: true,
-                fetchedAt: stale.fetchedAt
-            };
+            return { ...stale, servedFrom: 'stale', stale: true, fetchedAt: stale.fetchedAt };
         }
         return remember(
-            username,
+            cacheKey,
             errorSnapshot(
                 503,
                 'Instagram sedang membatasi request (rate-limit). Coba beberapa saat lagi.',
@@ -509,7 +516,7 @@ async function loadSnapshot(username: string): Promise<Snapshot> {
     }
 
     return remember(
-        username,
+        cacheKey,
         {
             ok: true,
             statusCode: 200,
@@ -764,7 +771,8 @@ export default async function instagramProfileHandler(req: Request, res: Respons
         compactRaw
     };
 
-    const key = parsed.username;
+    const withApi = !input.compact;
+    const key = `${parsed.username}:${withApi ? 'full' : 'compact'}`;
     const cached = snapshotCache.get(key);
     if (cached && Date.now() < cached.expires) {
         return send(res, cached.snapshot, input, 'cache');
@@ -772,7 +780,7 @@ export default async function instagramProfileHandler(req: Request, res: Respons
 
     let pending = inflight.get(key);
     if (!pending) {
-        pending = loadSnapshot(key).finally(() => inflight.delete(key));
+        pending = loadSnapshot(parsed.username, key, withApi).finally(() => inflight.delete(key));
         inflight.set(key, pending);
     }
 
