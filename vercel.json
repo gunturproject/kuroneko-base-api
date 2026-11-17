@@ -22,6 +22,10 @@
       "dest": "index.ts"
     },
     {
+      "src": "/config",
+      "dest": "/public/config.json"
+    },
+    {
       "src": "/",
       "dest": "/public/landing/landing.html"
     },
@@ -48,11 +52,47 @@
   ],
   "headers": [
     {
-      "source": "/(.*\\.(?:css|js|mjs|jpg|jpeg|png|gif|svg|webp|ico|woff2?|ttf|map))",
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/landing/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/docs/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/stats/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/config",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=31536000, stale-while-revalidate=604800"
         }
       ]
     }

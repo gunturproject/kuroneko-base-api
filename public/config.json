@@ -1,0 +1,141 @@
+{
+  "creator": "Danzz",
+  "settings": {
+    "creator": "Danzz",
+    "apiName": "KuroNeko",
+    "description": "A free and reliable API service designed for modern application development. Built with Node.js and TypeScript, delivering fast performance, stable endpoints, and easy integration.",
+    "apiVersion": "v1.0",
+    "visitors": "0",
+    "favicon": "/src/danzz.jpg",
+    "thumbnail": "/src/thumbnail.jpg",
+    "channelUrl": "https://whatsapp.com/channel/0029VbBQG1n3QxRsqN7XkS06",
+    "github": "https://github.com/DanzzAraAra"
+  },
+  "tags": {
+    "ai": [
+      {
+        "name": "Kuroneko Chat",
+        "endpoint": "/api/ai/kuroneko",
+        "filename": "kuroneko",
+        "method": "GET",
+        "params": [
+          {
+            "name": "q",
+            "required": true,
+            "description": "Question"
+          },
+          {
+            "name": "session",
+            "required": false,
+            "description": "Session ID"
+          }
+        ]
+      }
+    ],
+    "download": [
+      {
+        "name": "Facebook Downloader",
+        "endpoint": "/api/download/facebook",
+        "filename": "facebook",
+        "method": "GET",
+        "params": [
+          {
+            "name": "url",
+            "required": true,
+            "description": "Facebook URL"
+          }
+        ]
+      },
+      {
+        "name": "TikTok Downloader (No Watermark)",
+        "endpoint": "/api/download/tiktok",
+        "filename": "tiktok",
+        "method": "GET",
+        "params": [
+          {
+            "name": "url",
+            "required": true,
+            "description": "TikTok video URL (boleh short link vt.tiktok.com / vm.tiktok.com)"
+          },
+          {
+            "name": "hd",
+            "required": false,
+            "description": "Isi 1 untuk mengambil link kualitas HD (jika tersedia)"
+          }
+        ]
+      }
+    ],
+    "maker": [
+      {
+        "name": "Brat Generator",
+        "endpoint": "/api/maker/brat",
+        "filename": "brat",
+        "method": "GET",
+        "params": [
+          {
+            "name": "text",
+            "required": true,
+            "description": "Text"
+          }
+        ]
+      }
+    ],
+    "random": [
+      {
+        "name": "Random Blue Archive",
+        "endpoint": "/api/random/blue_archive",
+        "filename": "blue_archive",
+        "method": "GET",
+        "params": []
+      }
+    ],
+    "search": [
+      {
+        "name": "Youtube Search",
+        "endpoint": "/api/search/yts",
+        "filename": "yts",
+        "method": "GET",
+        "params": [
+          {
+            "name": "q",
+            "required": true,
+            "description": "Query"
+          }
+        ]
+      },
+      {
+        "name": "Pinterest Search",
+        "endpoint": "/api/search/pinterest",
+        "filename": "pinterest",
+        "method": "GET",
+        "params": [
+          {
+            "name": "q",
+            "required": true,
+            "description": "Query"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "Short URL",
+        "endpoint": "/api/tools/shorturl",
+        "filename": "shorturl",
+        "method": "GET",
+        "params": [
+          {
+            "name": "url",
+            "required": true,
+            "description": "Original URL"
+          },
+          {
+            "name": "alias",
+            "required": false,
+            "description": "Custom Alias"
+          }
+        ]
+      }
+    ]
+  }
+}
