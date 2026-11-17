@@ -203,7 +203,8 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
 
         return res.status(502).json({
             status: false,
-            message: 'Gagal meng-upscale atau meng-upload gambar ke Catbox.'
+            message: 'Gagal meng-upscale atau meng-upload gambar ke Catbox.',
+            detail: message || String(error)
         });
     }
 }
