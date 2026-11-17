@@ -428,6 +428,29 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
                         ios: og.iosUrl || null
                     }
                 },
+                region: {
+                    // Bahasa yang disimpan akun (mis. "id" = Bahasa Indonesia).
+                    account_language: user.language || null,
+                    // Region yang terdeteksi TikTok dari IP server tempat request ini jalan.
+                    request_region: scope.appContext?.region || null,
+                    request_language: scope.appContext?.language || null,
+                    cluster_region: scope.appContext?.clusterRegion || null,
+                    host: scope.appContext?.host || null,
+                    idc: scope.bizContext?.idc || null,
+                    vregion: scope.bizContext?.vregion || null,
+                    vgeo: scope.bizContext?.vgeo || null,
+                    tea_channel: scope.bizContext?.domains?.teaChannel || null,
+                    geo: Array.isArray(scope.bizContext?.geo) ? scope.bizContext!.geo : [],
+                    geo_city: scope.bizContext?.geoCity || null,
+                    subdivisions: Array.isArray(scope.bizContext?.subdivisions)
+                        ? scope.bizContext!.subdivisions
+                        : [],
+                    os: scope.bizContext?.os || null,
+                    is_mobile: Boolean(scope.bizContext?.isMobile),
+                    detected_as_bot: Boolean(scope.bizContext?.isBot),
+                    bot_type: scope.appContext?.botType || null,
+                    note: 'account_language berasal dari data akun. Field request_* / idc / vregion / vgeo adalah region yang terdeteksi dari IP server, BUKAN lokasi domisili akun (TikTok tidak menyediakannya untuk profil publik).'
+                },
                 stats: {
                     followers,
                     following,
