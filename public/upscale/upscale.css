@@ -60,6 +60,15 @@ body{
 }
 .up-title span{color:var(--up-violet);font-weight:700}
 .header-actions{flex:0 0 auto;gap:6px}
+/* ogui-toolbar draws its own border/padding; keep it flat here. */
+.up-header .header-actions.ogui-toolbar,
+.up-actions.ogui-toolbar{
+  border:0;
+  padding:0;
+  background:transparent;
+  box-shadow:none;
+  border-radius:0;
+}
 
 /* ---------- layout ---------- */
 
@@ -127,28 +136,45 @@ body{
 .up-label{font-size:12px;font-weight:800;letter-spacing:.02em;color:#e8e3ff}
 .up-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px}
 .up-input{
+  display:block;
+  appearance:none;
+  -webkit-appearance:none;
   min-width:0;
   width:100%;
   height:42px;
   padding:0 12px;
   font-size:13px;
+  line-height:42px;
   color:var(--up-ink);
+  background:rgb(8 6 20 / .55);
+  border:1px solid var(--up-line);
   border-radius:11px;
+  box-shadow:inset 0 1px rgb(255 255 255 / .06);
 }
 .up-input::placeholder{color:#7d769c}
-.up-input:focus{outline:none}
+.up-input:focus{
+  outline:none;
+  border-color:rgb(167 139 250 / .6);
+  box-shadow:0 0 0 3px rgb(167 139 250 / .14);
+}
+.up-input[readonly]{color:#bbf7d0}
 .up-hint{margin:0;color:var(--up-muted);font-size:11px;line-height:1.5;word-break:break-all}
 .up-hint code{color:var(--up-violet);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 
 .up-controls{display:grid;gap:14px}
-.up-select{
+.ogui-select .up-select{
   width:100%;
   height:40px;
+  padding:0 2rem 0 .75rem;
   font-size:12px;
   font-weight:600;
   color:var(--up-ink);
   cursor:pointer;
+  background:transparent;
+  border:0;
+  outline:0;
 }
+.ogui-select .up-select option{color:#f5f3ff;background:#15102e}
 .up-switch{
   min-width:0;
   width:100%;
@@ -311,6 +337,23 @@ body{
   .up-hero{grid-template-columns:minmax(0,1fr) 320px;align-items:center}
   .up-hero-steps{grid-template-columns:1fr;gap:7px}
   .up-step{justify-content:flex-start;padding-left:12px}
+}
+
+/* Narrow phones: give the URL field its own row instead of squeezing it
+   between two buttons, and let the step chips wrap into a 2x2 grid. */
+@media (max-width:480px){
+  .up-input-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .up-input-row .up-input{grid-column:1/-1}
+  .up-result-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .up-result-row .up-input{grid-column:1/-1}
+  .up-hero-steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .up-hero-title{font-size:20px}
+  .up-title{font-size:13px}
+  .header-inner{padding:10px 12px;gap:8px}
+  .up-main{padding:14px 12px 32px}
+  .up-hero,.up-body{padding:15px}
+  .up-actions{grid-template-columns:1fr 1fr;gap:8px}
+  .up-actions .ogui-button{min-width:0;padding-inline:6px}
 }
 
 @media (prefers-reduced-motion:reduce){
