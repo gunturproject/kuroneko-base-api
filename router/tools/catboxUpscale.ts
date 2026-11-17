@@ -152,7 +152,13 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
         });
 
         const uploaded = await axios.post<string>('https://catbox.moe/user/api.php', form, {
-            headers: form.getHeaders(),
+            headers: {
+                ...form.getHeaders(),
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+                Referer: 'https://catbox.moe/',
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9'
+            },
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
             timeout: 60000,
