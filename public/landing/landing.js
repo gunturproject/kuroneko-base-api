@@ -12,28 +12,36 @@ function resolveAssetUrl(value){
 }
 
 function playThumbVideo(video){
-    let started=video.play();
+    let unlocked=false;
 
-    if(started&&started.catch){
-        started.catch(()=>{
-            video.muted=true;
-            let fallback=video.play();
-            if(fallback&&fallback.catch) fallback.catch(()=>{});
+    const start=()=>{
+        video.muted=false;
+        const attempt=video.play();
+        if(attempt&&attempt.catch){
+            attempt.catch(()=>{
+                if(unlocked) return;
+                video.muted=true;
+                const silent=video.play();
+                if(silent&&silent.catch) silent.catch(()=>{});
+            });
+        }
+    };
 
-            const unmute=()=>{
-                document.removeEventListener('pointerdown',unmute);
-                document.removeEventListener('touchstart',unmute);
-                document.removeEventListener('keydown',unmute);
-                video.muted=false;
-                const resumed=video.play();
-                if(resumed&&resumed.catch) resumed.catch(()=>{});
-            };
+    const unlock=()=>{
+        if(unlocked) return;
+        unlocked=true;
+        detach();
+        video.muted=false;
+        const resumed=video.play();
+        if(resumed&&resumed.catch) resumed.catch(()=>{});
+    };
 
-            document.addEventListener('pointerdown',unmute,{once:true,passive:true});
-            document.addEventListener('touchstart',unmute,{once:true,passive:true});
-            document.addEventListener('keydown',unmute,{once:true});
-        });
-    }
+    const events=['pointerdown','touchstart','click','keydown','mousemove','wheel','scroll'];
+    const detach=()=>events.forEach(name=>document.removeEventListener(name,unlock));
+    events.forEach(name=>document.addEventListener(name,unlock,{once:true,passive:true}));
+
+    start();
+    video.addEventListener('loadeddata',()=>{ if(!unlocked) start(); },{once:true});
 }
 
 function share(){
