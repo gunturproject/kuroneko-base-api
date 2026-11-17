@@ -26,3 +26,15 @@
     backface-visibility:hidden;
   }
 }
+
+/* Pixel-exact search glyph. Painting it as the input's own background avoids
+   the absolute-positioned <i> drifting with the ogui grid / Tailwind cascade.
+   16px icon at x=14, text starts at 40px -> 10px even gap, always centered. */
+.search-field .clay-input,.search-field .ogui-search{
+  padding-left:40px!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23a78bfa' d='M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0s208 93.1 208 208zM208 352c79.5 0 144-64.5 144-144S287.5 64 208 64 64 128.5 64 208s64.5 144 144 144z'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;
+  background-position:14px center!important;
+  background-size:16px 16px!important;
+}
+.search-field .search-icon{display:none!important}
