@@ -137,6 +137,19 @@
         ]
       },
       {
+        "name": "WeAreDevs Lua Obfuscator",
+        "endpoint": "/api/tools/obfuscate",
+        "filename": "wearedevsObfuscate",
+        "method": "POST",
+        "params": [
+          {
+            "name": "script",
+            "required": true,
+            "description": "Kode Lua/Luau yang akan di-obfuscasi (JSON body: { \"script\": \"...\" }, maks 30 MB)"
+          }
+        ]
+      },
+      {
         "name": "Catbox Image Upscaler",
         "endpoint": "/api/tools/catbox-upscale",
         "filename": "catboxUpscale",
