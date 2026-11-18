@@ -62,5 +62,38 @@
         "description": "Tingkat ketajaman 0-1 (default 0.6)"
       }
     ]
+  },
+  {
+    "name": "Gofile Scraper",
+    "endpoint": "/api/tools/gofile",
+    "filename": "gofile",
+    "method": "GET",
+    "params": [
+      {
+        "name": "url",
+        "required": false,
+        "description": "URL folder/file Gofile (https://gofile.io/d/KODE). Alternatif pakai 'code'."
+      },
+      {
+        "name": "code",
+        "required": false,
+        "description": "Kode share Gofile (6-64 karakter) atau UUID konten."
+      },
+      {
+        "name": "page",
+        "required": false,
+        "description": "Halaman listing, 1-1000 (default 1)."
+      },
+      {
+        "name": "filter",
+        "required": false,
+        "description": "Filter nama file (maks 80 karakter)."
+      },
+      {
+        "name": "compact",
+        "required": false,
+        "description": "1/true untuk respons ringkas (maks 5 item)."
+      }
+    ]
   }
 ]
