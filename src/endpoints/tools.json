@@ -62,5 +62,48 @@
         "description": "Tingkat ketajaman 0-1 (default 0.6)"
       }
     ]
+  },
+  {
+    "name": "ScriptPastebin Scraper",
+    "endpoint": "/api/tools/scriptpastebin",
+    "filename": "scriptpastebin",
+    "method": "GET",
+    "params": [
+      {
+        "name": "q",
+        "required": false,
+        "description": "Kata kunci pencarian lintas scriptpastebin.com dan scriptpastebins.com (alias: search). Contoh: figgy"
+      },
+      {
+        "name": "url",
+        "required": false,
+        "description": "URL post lengkap di scriptpastebin.com atau scriptpastebins.com. Mode detail: metadata + kode script."
+      },
+      {
+        "name": "slug",
+        "required": false,
+        "description": "Slug post tanpa URL, misal figgy-hub-steal-an-egg-script. Pakai bersama site=plural bila perlu."
+      },
+      {
+        "name": "site",
+        "required": false,
+        "description": "singular, plural, atau both (default both). Dipakai untuk memilih domain saat search/slug."
+      },
+      {
+        "name": "page",
+        "required": false,
+        "description": "Halaman hasil search, 1-100 (default 1)."
+      },
+      {
+        "name": "limit",
+        "required": false,
+        "description": "Jumlah maksimal hasil gabungan, 1-50 (default 10, alias: per_page)."
+      },
+      {
+        "name": "compact",
+        "required": false,
+        "description": "1/true untuk respons ringkas (tanpa excerpt, terms, content_html, links)."
+      }
+    ]
   }
 ]
