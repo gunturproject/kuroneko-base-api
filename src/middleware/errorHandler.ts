@@ -14,18 +14,29 @@ export const errorHandler = (
         return next(error);
     }
 
-    const message =
-        error instanceof Error
-            ? error.message
-            : 'Internal Server Error';
-            
-    console.error(
-        `[ERROR] ${req.method} ${req.originalUrl}`,
-        error
-    );
+    const status =
+        typeof (error as any)?.status === 'number' &&
+        (error as any).status >= 400 &&
+        (error as any).status < 500
+            ? (error as any).status
+            : 500;
 
-    return res.status(500).json({
+    const clientMessage =
+        status === 400
+            ? 'Request tidak valid.'
+            : status === 413
+                ? 'Payload terlalu besar.'
+                : status === 415
+                    ? 'Content-Type tidak didukung.'
+                    : 'Internal Server Error';
+
+    if (status >= 500) {
+        console.error(`[ERROR] ${req.method} ${req.originalUrl}`, error);
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(status).json({
         status: false,
-        message: 'Internal Server Error'
+        message: clientMessage
     });
 };

@@ -15,6 +15,7 @@ import os from 'os';
 import type { ServeStaticOptions } from 'serve-static';
 import { rateLimit } from './src/middleware/rateLimit';
 import { errorHandler } from './src/middleware/errorHandler';
+import { inputGuard, securityHeaders } from './src/middleware/security';
 import {
     loadRouter,
     initAutoLoad,
@@ -28,7 +29,9 @@ if (!port) {
     console.error('[✗] PORT is not configured');
     process.exit(1);
 }
-app.set('trust proxy', true);
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.set('query parser', 'simple');
 const configPaths = [
     path.join(__dirname, 'src', 'config.json'),
     path.join(__dirname, '..', 'src', 'config.json'),
@@ -90,9 +93,25 @@ const logRequest = (req: Request, res: Response) => {
     if (recentRequests.length > 50) recentRequests.shift();
 };
 
-app.use(cors());
-app.use(express.json({ limit: '30mb' }));
-app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+app.use(securityHeaders);
+app.use(
+    cors({
+        origin: true,
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+        exposedHeaders: ['X-IG-Cache', 'X-IG-Upstream', 'Retry-After'],
+        optionsSuccessStatus: 204,
+        maxAge: 600
+    })
+);
+app.use(express.json({ limit: '30mb', strict: true }));
+app.use(
+    express.urlencoded({
+        extended: false,
+        limit: '30mb',
+        parameterLimit: 100
+    })
+);
 
 app.use((req: Request, res: Response, next: NextFunction) => {
     res.on('finish', () => logRequest(req, res));
@@ -121,6 +140,7 @@ const staticOptions: ServeStaticOptions = {
 app.use(express.static(path.join(process.cwd(), 'public'), staticOptions));
 app.use('/src', express.static(path.join(process.cwd(), 'src'), staticOptions));
 
+app.use(inputGuard); // SQLi/XSS/traversal/RCE/NoSQL/SSRF filter
 app.use(rateLimit); // rate limiter
 loadRouter(app, config); // endpoints router
 

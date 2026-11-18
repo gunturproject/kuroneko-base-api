@@ -3,23 +3,14 @@
  * © Dandy
  */
 import { Request, Response } from 'express';
+import { getClientIp } from './security/clientIp';
 
 export const logRouterRequest = (
     req: Request,
     res: Response
 ) => {
     res.on('finish', () => {
-        let ip =
-            req.headers['x-forwarded-for'] ||
-            req.socket.remoteAddress ||
-            '';
-        if (Array.isArray(ip)) {
-            ip = ip[0];
-        }
-        if (typeof ip === 'string') {
-            ip = ip.split(',')[0].trim();
-            ip = ip.replace('::ffff:', '');
-        }
+        const ip = getClientIp(req);
         const status = res.statusCode;
         const url = `${req.protocol}://${req.get(
             'host'
@@ -43,17 +34,7 @@ export const logRouterRequest = (
 export const logRateLimit = (
     req: Request
 ) => {
-    let ip =
-        req.headers['x-forwarded-for'] ||
-        req.socket.remoteAddress ||
-        '';
-    if (Array.isArray(ip)) {
-        ip = ip[0];
-    }
-    if (typeof ip === 'string') {
-        ip = ip.split(',')[0].trim();
-        ip = ip.replace('::ffff:', '');
-    }
+    const ip = getClientIp(req);
     console.log(
         `[${ip}] = \x1b[31m[429]\x1b[0m RATE LIMIT BAN`
     );

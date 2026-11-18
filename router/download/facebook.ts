@@ -2,6 +2,17 @@ import { Request, Response } from 'express';
 import axios from 'axios';
 import qs from 'qs';
 import * as cheerio from 'cheerio';
+import { parsePublicHttpUrl } from '../../src/security/url';
+
+const FACEBOOK_HOSTS = /(^|\.)(?:facebook\.com|fb\.watch|fb\.com)$/i;
+
+function normalizeFacebookUrl(raw: string): string {
+    const parsed = parsePublicHttpUrl(raw);
+    if (!parsed || !FACEBOOK_HOSTS.test(parsed.hostname)) {
+        throw new Error('URL harus berasal dari Facebook (facebook.com atau fb.watch)');
+    }
+    return parsed.toString();
+}
 
 async function getFdownTokens() {
     const { data } = await axios.get('https://fdown.net', {
@@ -67,14 +78,21 @@ async function facebookDl(url: string) {
 }
 
 export default async function facebookHandler(req: Request, res: Response) {
-    const url = (req.query.url || req.body.url) as string;
+    const rawUrl = String(req.query.url || req.body?.url || '').trim();
 
-    if (!url) return res.status(400).json({ status: false, message: "URL required" });
+    if (!rawUrl) return res.status(400).json({ status: false, message: "URL required" });
+
+    let url: string;
+    try {
+        url = normalizeFacebookUrl(rawUrl);
+    } catch (error: any) {
+        return res.status(400).json({ status: false, message: error?.message || 'URL tidak valid' });
+    }
 
     try {
         const result = await facebookDl(url);
-        res.json({ status: true, data: result });
+        return res.json({ status: true, data: result });
     } catch (error: any) {
-        res.status(500).json({ status: false, message: error.message });
+        return res.status(500).json({ status: false, message: error?.message || 'Gagal memproses URL Facebook' });
     }
 }

@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from "express";
 import { Redis } from "@upstash/redis";
 import { logRateLimit } from "../logger";
+import { getClientIp } from "../security/clientIp";
 
 const MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS);
 const WINDOW_TIME = Number(process.env.RATE_LIMIT_WINDOW);
@@ -26,21 +27,6 @@ const hasRedis =
   Boolean(process.env.UPSTASH_REDIS_REST_TOKEN);
 
 const redis = hasRedis ? Redis.fromEnv() : null;
-
-const getIp = (req: Request): string => {
-  const forwarded = req.headers["x-forwarded-for"];
-  let ip: string;
-
-  if (typeof forwarded === "string") {
-    ip = forwarded.split(",")[0].trim();
-  } else if (Array.isArray(forwarded)) {
-    ip = forwarded[0]?.trim() || "unknown";
-  } else {
-    ip = req.ip || req.socket?.remoteAddress || "unknown";
-  }
-
-  return ip.replace("::ffff:", "").trim();
-};
 
 /*
  * Memory fallback
@@ -234,7 +220,7 @@ export const rateLimit = async (
   res: Response,
   next: NextFunction
 ) => {
-  const ip = getIp(req);
+  const ip = getClientIp(req);
   const now = Date.now();
 
   /*
