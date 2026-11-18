@@ -7,12 +7,12 @@ import axios from 'axios';
  * Strategi:
  *  1. Cache CDN lewat Cache-Control s-maxage (Vercel menyimpan response GET).
  *  2. Cache memory per instance + request coalescing (1 fetch per username).
- *  3. Circuit breaker: kalau Instagram balas 429 atau redirect ke /accounts/login/,
- *     fetch berikutnya diskip selama cooldown dan memakai snapshot stale kalau ada.
- *  4. Fallback proxy baca publik (Google Translate) dipakai kalau IP datacenter
- *     dilayani halaman login, karena proxy itu mengambil OG meta asli.
+ *  3. Proxy baca publik (Google Translate) adalah jalur UTAMA. IP server kita
+ *     hampir tidak pernah menyentuh Instagram, jadi tidak menyumbang rate-limit.
+ *  4. Circuit breaker: kalau Instagram balas 429 atau redirect ke /accounts/login/,
+ *     fetch berikutnya diskip selama cooldown dan memakai snapshot stale/degraded.
  *  5. Compact tidak memanggil web_profile_info sama sekali; full memanggilnya
- *     hanya kalau OG tersedia dan tidak sedang cooldown.
+ *     hanya kalau OG tersedia dan tidak sedang cooldown 5 menit.
  *
  * Tanpa login: phone/email, follower list, story, dan like/comment per akun
  * tidak tersedia. Field tersebut ditandai, bukan dikarang.
@@ -28,7 +28,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 const ERROR_TTL = 30 * 1000;
 const NOT_FOUND_TTL = 2 * 60 * 1000;
 const STALE_TTL = 60 * 60 * 1000;
-const API_COOLDOWN = 60 * 1000;
+const API_COOLDOWN = 5 * 60 * 1000;
 const OG_COOLDOWN = 30 * 1000;
 const OG_BLOCK_COOLDOWN = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
@@ -79,8 +79,17 @@ interface Snapshot {
     blockDetail?: any;
 }
 
+interface BlockInfo {
+    statuses: Record<string, string>;
+    httpInfo: Record<string, any>;
+    html: string;
+    detail: any;
+    expires: number;
+}
+
 const snapshotCache = new Map<string, CachedSnapshot>();
 const inflight = new Map<string, Promise<Snapshot>>();
+const blockInfoCache = new Map<string, BlockInfo>();
 let apiCooldownUntil = 0;
 let ogCooldownUntil = 0;
 
@@ -316,6 +325,12 @@ function statusOf(result: PromiseSettledResult<unknown>): string {
     return 'error';
 }
 
+function statusCodeOf(result: PromiseSettledResult<unknown>): number | null {
+    if (result.status === 'fulfilled') return (result.value as any)?.status ?? null;
+    if (axios.isAxiosError(result.reason)) return result.reason.response?.status ?? null;
+    return null;
+}
+
 function httpOf(result: PromiseSettledResult<unknown>): Record<string, any> {
     if (result.status !== 'fulfilled') {
         return {
@@ -428,6 +443,17 @@ async function loadSnapshot(
     const profileUrl = `https://www.instagram.com/${username}/`;
     const cached = snapshotCache.get(cacheKey);
     const stale = cached && Date.now() < cached.staleUntil ? cached.snapshot : null;
+
+    const blockInfo = blockInfoCache.get(username);
+    if (!stale && blockInfo && Date.now() < blockInfo.expires) {
+        const ttl = Math.max(1000, Math.min(CACHE_TTL, blockInfo.expires - Date.now()));
+        return remember(
+            cacheKey,
+            degradedSnapshot(blockInfo.html, blockInfo.statuses, blockInfo.httpInfo, blockInfo.detail),
+            ttl
+        );
+    }
+
     const common = {
         timeout: 20000,
         maxContentLength: 12 * 1024 * 1024,
@@ -462,6 +488,10 @@ async function loadSnapshot(
         const html = result.status === 'fulfilled' ? String((result.value as any)?.data ?? '') : '';
         if (!ogHtml) ogHtml = html;
         if (isRateLimited(result)) ogCooldownUntil = Date.now() + OG_COOLDOWN;
+        if (label.startsWith('og_proxy_gtranslate') && statusCodeOf(result) === 404) {
+            isNotFound = true;
+            ogHtml = html;
+        }
         if (ogMetaExists(html)) {
             ogHtml = html;
             ogMeta = pickMeta(html);
@@ -478,21 +508,20 @@ async function loadSnapshot(
         return html;
     };
 
-    await tryOg(profileUrl, 'og_profile_page');
-
-    // IP datacenter/Vercel sering dilayani /accounts/login/. Google Translate
-    // proxy mengambil halaman dari IP berbeda dan OG meta aslinya tetap ada.
-    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
-        for (let i = 0; i < GTRANSLATE_ORIGINS.length; i++) {
-            await tryOg(
-                proxyProfileUrl(GTRANSLATE_ORIGINS[i], username),
-                i === 0 ? 'og_proxy_gtranslate' : 'og_proxy_gtranslate_alt'
-            );
-            if (ogMetaExists(ogHtml) || isNotFound || Date.now() < ogCooldownUntil) break;
-        }
+    // Jalur utama: proxy baca publik. IP kita tidak menyentuh Instagram sama sekali
+    // pada kondisi normal, jadi tidak menambah kuota rate-limit Instagram.
+    for (let i = 0; i < GTRANSLATE_ORIGINS.length; i++) {
+        if (ogMetaExists(ogHtml) || isNotFound || Date.now() < ogCooldownUntil) break;
+        await tryOg(
+            proxyProfileUrl(GTRANSLATE_ORIGINS[i], username),
+            i === 0 ? 'og_proxy_gtranslate' : 'og_proxy_gtranslate_alt'
+        );
     }
 
-    // Fallback terakhir kalau proxy juga gagal. Sengaja dibatasi.
+    // Cadangan saja: dipakai kalau proxy gagal. Sengaja dibatasi.
+    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
+        await tryOg(profileUrl, 'og_profile_page');
+    }
     if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
         await tryOg(`https://instagram.com/${username}/`, 'og_profile_page_alt1');
     }
@@ -549,7 +578,7 @@ async function loadSnapshot(
 
     const detail = {
         og_title: ogMeta['og:title'] || null,
-        og_status: statuses.og_profile_page || null,
+        og_status: statuses.og_proxy_gtranslate || statuses.og_profile_page || null,
         og_fallback_statuses: Object.entries(statuses)
             .filter(([key]) => key.startsWith('og_'))
             .map(([key, value]) => `${key}:${value}`),
@@ -568,6 +597,20 @@ async function loadSnapshot(
         api_cooldown_active: Date.now() < apiCooldownUntil,
         upstream_blocked: upstreamBlocked
     };
+
+    if (upstreamBlocked) {
+        blockInfoCache.set(username, {
+            statuses,
+            httpInfo,
+            html: ogHtml,
+            detail,
+            expires: ogCooldownUntil
+        });
+        if (blockInfoCache.size > MAX_CACHE_ENTRIES) {
+            const oldest = blockInfoCache.keys().next().value as string | undefined;
+            if (oldest) blockInfoCache.delete(oldest);
+        }
+    }
 
     if (!ogMetaExists(ogHtml) && !apiUser) {
         if (isNotFound) {
