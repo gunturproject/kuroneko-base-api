@@ -58,7 +58,8 @@ const readScriptFromUrl = async (raw: string): Promise<ScriptResult> => {
     try {
         const response = await fetch(target.toString(), {
             headers: { 'User-Agent': BROWSER_UA, Accept: '*/*' },
-            signal: AbortSignal.timeout(60000)
+            signal: AbortSignal.timeout(60000),
+            redirect: 'error'
         });
 
         if (!response.ok) {

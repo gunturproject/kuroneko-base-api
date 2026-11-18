@@ -625,7 +625,7 @@ export default async function telegramProfileHandler(req: Request, res: Response
             message: timeout
                 ? 'Telegram terlalu lama merespons. Coba lagi.'
                 : 'Gagal mengambil profil Telegram.',
-            detail: error?.message || String(error)
+            detail: 'internal_error'
         });
     }
 }

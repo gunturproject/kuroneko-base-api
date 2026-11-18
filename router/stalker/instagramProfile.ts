@@ -939,7 +939,7 @@ export default async function instagramProfileHandler(req: Request, res: Respons
         return res.status(500).json({
             status: false,
             message: 'Gagal mengambil profil Instagram.',
-            detail: error?.message || String(error)
+            detail: 'internal_error'
         });
     }
 }

@@ -798,7 +798,7 @@ export default async function robloxProfileHandler(req: Request, res: Response) 
             message: timeout
                 ? 'Roblox terlalu lama merespons. Coba lagi.'
                 : 'Gagal mengambil profil Roblox.',
-            detail: error?.message || String(error)
+            detail: 'internal_error'
         });
     }
 }

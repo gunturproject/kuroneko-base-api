@@ -86,6 +86,7 @@ export default async function catboxUpscaleHandler(req: Request, res: Response) 
     try {
         const response = await fetch(target.toString(), {
             signal: AbortSignal.timeout(30000),
+            redirect: 'error',
             headers: { 'User-Agent': 'KuroNeko-Image-Upscaler/1.0' }
         });
 

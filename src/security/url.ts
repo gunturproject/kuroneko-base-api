@@ -1,6 +1,6 @@
 /*
  * Validasi URL publik untuk mencegah SSRF dan skema URL berbahaya.
- * Dipakai guard global dan bisa dipakai handler yang menerima parameter url.
+ * Dipakai guard global dan handler yang menerima parameter url.
  */
 
 const PRIVATE_HOSTNAMES = new Set([
@@ -22,26 +22,65 @@ const isPrivateIpv4 = (host: string): boolean => {
         return false;
     }
 
-    const [a, b] = parts;
+    const [a, b, c, d] = parts;
     if (a === 0 || a === 10 || a === 127) return true;
     if (a === 169 && b === 254) return true;
     if (a === 172 && b >= 16 && b <= 31) return true;
     if (a === 192 && b === 168) return true;
     if (a === 100 && b >= 64 && b <= 127) return true;
-    if (a === 192 && b === 0) return true;
+    if (a === 192 && (b === 0 || b === 88 && c === 99)) return true;
     if (a === 198 && (b === 18 || b === 19)) return true;
+    if (a >= 224) return true; // multicast + reserved + broadcast
 
     return false;
 };
 
-const isPrivateIpv6 = (host: string): boolean => {
-    const value = host.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0];
+const parseHexGroups = (value: string): number[] | null => {
+    const parts = value.split(':').filter(Boolean);
+    if (!parts.length || parts.length > 8) return null;
+
+    const groups: number[] = [];
+    for (const part of parts) {
+        if (!/^[0-9a-f]{1,4}$/.test(part)) return null;
+        groups.push(parseInt(part, 16));
+    }
+    return groups;
+};
+
+const privateFromHexPair = (groups: number[]): boolean => {
+    if (groups.length < 2) return false;
+    const hi = groups[groups.length - 2];
+    const lo = groups[groups.length - 1];
+    const ipv4 = `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+    return isPrivateIpv4(ipv4);
+};
+
+const isPrivateIpv6 = (raw: string): boolean => {
+    const value = raw.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0];
+    if (!value) return false;
     if (value === '::' || value === '::1') return true;
     if (/^f[cd][0-9a-f]{2}:/.test(value)) return true;
     if (/^fe[89ab][0-9a-f]:/.test(value)) return true;
 
-    const ipv4Mapped = value.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-    if (ipv4Mapped) return isPrivateIpv4(ipv4Mapped[1]);
+    // IPv4-mapped: ::ffff:127.0.0.1 / ::ffff:7f00:1
+    const mapped = value.match(/^::ffff:(.+)$/);
+    if (mapped) {
+        if (mapped[1].includes('.')) return isPrivateIpv4(mapped[1]);
+        const groups = parseHexGroups(mapped[1]);
+        return groups ? privateFromHexPair(groups) : false;
+    }
+
+    // NAT64 well-known prefix maps the last 32 bits to an IPv4 address.
+    if (value.startsWith('64:ff9b:')) {
+        const groups = parseHexGroups(value);
+        return groups ? privateFromHexPair(groups) : false;
+    }
+
+    // IPv4-compatible form: ::127.0.0.1 / ::7f00:1
+    const groups = parseHexGroups(value);
+    if (groups && groups.length <= 3 && groups.slice(0, -2).every((g) => g === 0)) {
+        return privateFromHexPair(groups);
+    }
 
     return false;
 };
@@ -59,6 +98,7 @@ export const isPrivateHost = (hostname: string): boolean => {
 export const parsePublicHttpUrl = (raw: string): URL | null => {
     let value = raw.trim();
     if (!value) return null;
+    if (/[\u0000-\u001f\u007f]/.test(value)) return null;
     if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
 
     let parsed: URL;

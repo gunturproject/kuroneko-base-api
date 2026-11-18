@@ -819,7 +819,7 @@ export default async function tiktokProfileHandler(req: Request, res: Response) 
             message: timeout
                 ? 'TikTok terlalu lama merespons. Coba lagi.'
                 : 'Gagal mengambil profil TikTok.',
-            detail: error?.message || String(error)
+            detail: 'internal_error'
         });
     }
 }

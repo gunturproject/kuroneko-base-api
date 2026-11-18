@@ -12,9 +12,12 @@ export const logRouterRequest = (
     res.on('finish', () => {
         const ip = getClientIp(req);
         const status = res.statusCode;
-        const url = `${req.protocol}://${req.get(
-            'host'
-        )}${req.originalUrl}`;
+        const safeHost = process.env.PUBLIC_API_HOST || 'kuroneko-api';
+        const safePath = req.originalUrl
+            .replace(/(=)[^&]+/g, '$1')
+            .replace(/[^\x20-\x7e]/g, '')
+            .slice(0, 300);
+        const url = `${req.protocol}://${safeHost}${safePath}`;
         let color = '\x1b[0m';
         if (status >= 500) {
             color = '\x1b[31m';

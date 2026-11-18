@@ -85,10 +85,11 @@ const logRequest = (req: Request, res: Response) => {
         return;
     }
 
-    const cleanUrl = req.originalUrl.replace(/(=)[^&]+/g, '$1');
-    const url = `${req.protocol}://${req.get('host')}${cleanUrl}`;
-
-    recentRequests.push(`[${req.method}] [${res.statusCode}] ${url}`);
+    // Jangan simpan query, Host header, atau karakter kontrol dari request:
+    // log ini terlihat lewat /stats/data dan bisa dipakai untuk log injection.
+    const cleanPath = req.path.replace(/[^\x20-\x7e]/g, '').slice(0, 180);
+    const safeHost = process.env.PUBLIC_API_HOST || 'kuroneko-api';
+    recentRequests.push(`[${req.method}] [${res.statusCode}] ${safeHost}${cleanPath}`);
 
     if (recentRequests.length > 50) recentRequests.shift();
 };
@@ -146,6 +147,7 @@ loadRouter(app, config); // endpoints router
 
 app.get('/stats/data', (req: Request, res: Response) => {
     try {
+        res.setHeader('Cache-Control', 'no-store');
         const totalMemory = os.totalmem();
         const freeMemory = os.freemem();
         const usedMemory = totalMemory - freeMemory;
@@ -155,9 +157,10 @@ app.get('/stats/data', (req: Request, res: Response) => {
             server: {
                 platform: os.platform(),
                 arch: os.arch(),
-                hostname: os.hostname(),
+                // Detail host/CPU disamarkan: endpoint ini publik.
+                hostname: 'redacted',
                 uptime: formatUptime(os.uptime()),
-                node_version: process.version,
+                node_version: 'v22.x',
                 memory: {
                     total: formatBytes(totalMemory),
                     used: formatBytes(usedMemory),
@@ -165,8 +168,8 @@ app.get('/stats/data', (req: Request, res: Response) => {
                     percent: Math.round((usedMemory / totalMemory) * 100)
                 },
                 cpu: {
-                    model: cpus[0]?.model || 'Unknown',
-                    speed: `${cpus[0]?.speed || 0} MHz`,
+                    model: 'Virtual CPU',
+                    speed: '0 MHz',
                     cores: cpus.length,
                     load: os.loadavg()[0].toFixed(2)
                 }

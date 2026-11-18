@@ -42,7 +42,27 @@ const FREE_FORM_KEYS = new Set([
     'response'
 ]);
 
-const URL_KEYS = new Set(['url', 'link', 'target', 'scripturl', 'imageurl']);
+const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+const URL_KEYS = new Set([
+    'url',
+    'link',
+    'target',
+    'uri',
+    'href',
+    'src',
+    'file',
+    'image',
+    'imageurl',
+    'scripturl',
+    'targeturl',
+    'callback',
+    'webhook',
+    'redirect',
+    'return',
+    'returnurl',
+    'next'
+]);
 
 const MAX_STRING_LENGTH = 20000;
 const MAX_DEPTH = 6;
@@ -54,6 +74,20 @@ const safeDecode = (value: string): string => {
     } catch {
         return value;
     }
+};
+
+// Attacker bisa mengirim ../ dalam beberapa lapis encoding. Decode berulang
+// supaya pola tetap terlihat setelah express meng-decode satu lapis.
+const decodeLayers = (value: string): string[] => {
+    const layers = [value];
+    let current = value;
+    for (let i = 0; i < 3; i++) {
+        const next = safeDecode(current);
+        if (next === current) break;
+        current = next;
+        layers.push(current);
+    }
+    return layers;
 };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -75,14 +109,15 @@ const checkString = (
 ): string | null => {
     if (value.length > MAX_STRING_LENGTH && !skipPatterns) return 'payload_too_long';
 
-    if (URL_KEYS.has(field.toLowerCase()) && value && !isSafePublicUrl(value)) {
-        return 'unsafe_url';
+    if (URL_KEYS.has(field.toLowerCase()) && value) {
+        for (const layer of decodeLayers(value)) {
+            if (!isSafePublicUrl(layer)) return 'unsafe_url';
+        }
     }
 
     if (skipPatterns) return null;
 
-    const haystacks = [value, safeDecode(value)];
-    for (const haystack of haystacks) {
+    for (const haystack of decodeLayers(value)) {
         for (const pattern of ATTACK_PATTERNS) {
             if (pattern.re.test(haystack)) return pattern.name;
         }
@@ -116,6 +151,13 @@ const inspect = (
 
     if (isPlainObject(value)) {
         for (const [key, child] of Object.entries(value)) {
+            const loweredKey = key.toLowerCase();
+            if (DANGEROUS_KEYS.has(loweredKey)) return 'unsafe_key';
+
+            for (const pattern of ATTACK_PATTERNS) {
+                if (pattern.re.test(key)) return pattern.name;
+            }
+
             const hit = inspect(child, key, depth + 1, counter);
             if (hit) return hit;
         }
