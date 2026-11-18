@@ -62,7 +62,7 @@
       {
         "name": "username",
         "required": true,
-        "description": "Username Instagram tanpa @ atau URL lengkap (contoh: instagram atau https://www.instagram.com/instagram/). Menggabungkan OG meta (nama, avatar, follower/following/post) dengan web_profile_info (bio, verified, private, kategori, bio links, highlight, postingan + likes/comments) bila tersedia. Anti rate-limit: cache CDN 5 menit + cache memory + coalescing + cooldown otomatis saat 429."
+        "description": "Username Instagram tanpa @ atau URL lengkap (contoh: instagram atau https://www.instagram.com/instagram/). Menggabungkan OG meta (nama, avatar, follower/following/post) dengan web_profile_info (bio, verified, private, kategori, bio links, highlight, postingan + likes/comments) bila tersedia. Anti rate-limit: cache CDN 5 menit + cache memory + coalescing + cooldown otomatis saat 429 + fallback proxy baca publik bila IP server diblokir + graceful degraded tanpa mengarang data."
       },
       {
         "name": "compact",

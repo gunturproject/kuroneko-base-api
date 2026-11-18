@@ -7,10 +7,12 @@ import axios from 'axios';
  * Strategi:
  *  1. Cache CDN lewat Cache-Control s-maxage (Vercel menyimpan response GET).
  *  2. Cache memory per instance + request coalescing (1 fetch per username).
- *  3. Circuit breaker: kalau Instagram balas 429, fetch berikutnya diskip
- *     selama cooldown dan memakai snapshot stale kalau ada.
- *  4. Hanya 2 request upstream maksimal: OG profile page + web_profile_info.
- *     Browser profile page (tidak ada data tambahan) sengaja dihapus.
+ *  3. Circuit breaker: kalau Instagram balas 429 atau redirect ke /accounts/login/,
+ *     fetch berikutnya diskip selama cooldown dan memakai snapshot stale kalau ada.
+ *  4. Fallback proxy baca publik (Google Translate) dipakai kalau IP datacenter
+ *     dilayani halaman login, karena proxy itu mengambil OG meta asli.
+ *  5. Compact tidak memanggil web_profile_info sama sekali; full memanggilnya
+ *     hanya kalau OG tersedia dan tidak sedang cooldown.
  *
  * Tanpa login: phone/email, follower list, story, dan like/comment per akun
  * tidak tersedia. Field tersebut ditandai, bukan dikarang.
@@ -28,7 +30,12 @@ const NOT_FOUND_TTL = 2 * 60 * 1000;
 const STALE_TTL = 60 * 60 * 1000;
 const API_COOLDOWN = 60 * 1000;
 const OG_COOLDOWN = 30 * 1000;
+const OG_BLOCK_COOLDOWN = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
+const GTRANSLATE_ORIGINS = [
+    'https://www-instagram-com.translate.goog',
+    'https://instagram-com.translate.goog'
+];
 
 interface InstagramInput {
     username: string;
@@ -67,6 +74,9 @@ interface Snapshot {
     cacheTtl: number;
     servedFrom: 'network' | 'cache' | 'stale' | 'inflight';
     stale?: boolean;
+    degraded?: boolean;
+    blockReason?: string;
+    blockDetail?: any;
 }
 
 const snapshotCache = new Map<string, CachedSnapshot>();
@@ -202,6 +212,20 @@ function notFoundPage(html: string): boolean {
         /"pageID"\s*:\s*"httpErrorPage"/i.test(html) ||
         /"pageID"\s*:\s*"errorRoot"/i.test(html)
     );
+}
+
+function loginRedirected(http: Record<string, any>): boolean {
+    return Object.values(http).some(
+        (info) => /\/accounts\/login\//i.test(String(info?.final_url || ''))
+    );
+}
+
+function looksLikeLoginPage(html: string): boolean {
+    return /Log into Instagram|log in to Instagram|accounts\/login/i.test(html);
+}
+
+function proxyProfileUrl(origin: string, username: string): string {
+    return `${origin}/${username}/?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en`;
 }
 
 function parseApiUser(apiJson: any): any | null {
@@ -370,6 +394,32 @@ function errorSnapshot(
     };
 }
 
+function degradedSnapshot(
+    ogHtml: string,
+    statuses: Record<string, string>,
+    httpInfo: Record<string, any>,
+    detail: any
+): Snapshot {
+    return {
+        ok: true,
+        statusCode: 200,
+        ogHtml,
+        ogMeta: {},
+        apiJson: null,
+        apiUser: null,
+        statuses,
+        httpInfo,
+        sources: [],
+        notFoundPage: false,
+        fetchedAt: Date.now(),
+        cacheTtl: CACHE_TTL,
+        servedFrom: 'network',
+        degraded: true,
+        blockReason: 'instagram_login_redirect',
+        blockDetail: detail
+    };
+}
+
 async function loadSnapshot(
     username: string,
     cacheKey: string,
@@ -398,6 +448,8 @@ async function loadSnapshot(
     let ogMeta: Meta = {};
     let isNotFound = false;
 
+    let directBlocked = false;
+
     const tryOg = async (url: string, label: string) => {
         if (Date.now() < ogCooldownUntil) {
             statuses[label] = 'cooldown';
@@ -408,6 +460,7 @@ async function loadSnapshot(
         statuses[label] = statusOf(result);
         httpInfo[label] = httpOf(result);
         const html = result.status === 'fulfilled' ? String((result.value as any)?.data ?? '') : '';
+        if (!ogHtml) ogHtml = html;
         if (isRateLimited(result)) ogCooldownUntil = Date.now() + OG_COOLDOWN;
         if (ogMetaExists(html)) {
             ogHtml = html;
@@ -415,35 +468,51 @@ async function loadSnapshot(
             if (!sources.includes(label)) sources.push(label);
         } else if (notFoundPage(html)) {
             isNotFound = true;
-            if (!ogHtml) ogHtml = html;
+            ogHtml = html;
+        } else if (
+            label.startsWith('og_profile_page') &&
+            (loginRedirected(httpInfo) || looksLikeLoginPage(html))
+        ) {
+            directBlocked = true;
         }
         return html;
     };
 
     await tryOg(profileUrl, 'og_profile_page');
 
-    // Vercel/datacenter IP kadang dilayani halaman generik. Coba host alternatif
-    // hanya kalau halaman utama tidak memberi OG meta dan bukan 429.
+    // IP datacenter/Vercel sering dilayani /accounts/login/. Google Translate
+    // proxy mengambil halaman dari IP berbeda dan OG meta aslinya tetap ada.
+    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
+        for (let i = 0; i < GTRANSLATE_ORIGINS.length; i++) {
+            await tryOg(
+                proxyProfileUrl(GTRANSLATE_ORIGINS[i], username),
+                i === 0 ? 'og_proxy_gtranslate' : 'og_proxy_gtranslate_alt'
+            );
+            if (ogMetaExists(ogHtml) || isNotFound || Date.now() < ogCooldownUntil) break;
+        }
+    }
+
+    // Fallback terakhir kalau proxy juga gagal. Sengaja dibatasi.
     if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
         await tryOg(`https://instagram.com/${username}/`, 'og_profile_page_alt1');
     }
     if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
-        await tryOg(`https://m.instagram.com/${username}/`, 'og_profile_page_alt2');
+        await sleep(400);
+        await tryOg(`${profileUrl}?_igst=${Date.now()}`, 'og_profile_page_retry');
     }
-    if (!ogMetaExists(ogHtml) && !isNotFound && Date.now() >= ogCooldownUntil) {
-        await sleep(600);
-        await tryOg(
-            `${profileUrl}?_igst=${Date.now()}`,
-            'og_profile_page_retry'
-        );
-    }
+
+    const upstreamBlocked =
+        !ogMetaExists(ogHtml) &&
+        (directBlocked || loginRedirected(httpInfo) || looksLikeLoginPage(ogHtml));
+    if (upstreamBlocked) ogCooldownUntil = Date.now() + OG_BLOCK_COOLDOWN;
 
     let apiJson: any = null;
     let apiUser: any = null;
     let apiResult: PromiseSettledResult<unknown> | null = null;
 
-    // Compact sengaja tidak memanggil API: ini pembeda utama anti rate-limit.
-    if (withApi && Date.now() >= apiCooldownUntil) {
+    // Compact tidak memanggil API. Kalau IP server diblokir, full juga diskip
+    // supaya tidak menambah 429 ke Instagram.
+    if (withApi && !upstreamBlocked && Date.now() >= apiCooldownUntil) {
         apiResult = await settledGet(
             `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`,
             {
@@ -467,6 +536,9 @@ async function loadSnapshot(
         } else if (apiUser) {
             sources.push('web_profile_info');
         }
+    } else if (withApi && upstreamBlocked) {
+        statuses.web_profile_info = 'skipped_blocked';
+        httpInfo.web_profile_info = { ok: false, error: 'skipped_blocked' };
     } else if (withApi) {
         statuses.web_profile_info = 'cooldown';
         httpInfo.web_profile_info = { ok: false, error: 'cooldown' };
@@ -479,15 +551,22 @@ async function loadSnapshot(
         og_title: ogMeta['og:title'] || null,
         og_status: statuses.og_profile_page || null,
         og_fallback_statuses: Object.entries(statuses)
-            .filter(([key]) => key.startsWith('og_profile_page_'))
+            .filter(([key]) => key.startsWith('og_'))
             .map(([key, value]) => `${key}:${value}`),
         og_bytes: ogHtml.length,
         og_http: httpInfo,
         og_page_id: (ogHtml.match(/"pageID"\s*:\s*"([^"]+)"/i) || [])[1] || null,
         og_title_tag: (ogHtml.match(/<title>([^<]*)<\/title>/i) || [])[1] || null,
         not_found_page: isNotFound,
-        api_status: apiResult ? statusOf(apiResult) : withApi ? 'cooldown' : 'skipped_compact',
-        api_cooldown_active: Date.now() < apiCooldownUntil
+        api_status: apiResult
+            ? statusOf(apiResult)
+            : upstreamBlocked
+                ? 'skipped_blocked'
+                : withApi
+                    ? 'cooldown'
+                    : 'skipped_compact',
+        api_cooldown_active: Date.now() < apiCooldownUntil,
+        upstream_blocked: upstreamBlocked
     };
 
     if (!ogMetaExists(ogHtml) && !apiUser) {
@@ -505,6 +584,13 @@ async function loadSnapshot(
         }
         if (stale) {
             return { ...stale, servedFrom: 'stale', stale: true, fetchedAt: stale.fetchedAt };
+        }
+        if (upstreamBlocked) {
+            return remember(
+                cacheKey,
+                degradedSnapshot(ogHtml, statuses, httpInfo, detail),
+                CACHE_TTL
+            );
         }
         return remember(
             cacheKey,
@@ -595,7 +681,10 @@ function buildSuccessBody(snapshot: Snapshot, input: HandlerInput) {
 
     return {
         status: true,
-        partial: !snapshot.apiUser,
+        partial: !snapshot.apiUser || Boolean(snapshot.degraded),
+        message: snapshot.degraded
+            ? 'Instagram memblokir IP server untuk halaman profil. Data tidak dapat diambil; hanya identitas username yang dikembalikan. Coba lagi nanti atau gunakan jaringan lain.'
+            : undefined,
         data: {
             profile: {
                 username: input.username,
@@ -657,6 +746,9 @@ function buildSuccessBody(snapshot: Snapshot, input: HandlerInput) {
             technical: {
                 endpoints: statuses,
                 http: httpInfo,
+                degraded: Boolean(snapshot.degraded),
+                block_reason: snapshot.blockReason || null,
+                block_detail: compact ? null : snapshot.blockDetail || null,
                 cache: {
                     served_from: snapshot.servedFrom,
                     stale: Boolean(snapshot.stale),
@@ -665,16 +757,23 @@ function buildSuccessBody(snapshot: Snapshot, input: HandlerInput) {
                     ttl_seconds: Math.round(snapshot.cacheTtl / 1000),
                     api_cooldown_active: Date.now() < apiCooldownUntil,
                     og_cooldown_active: Date.now() < ogCooldownUntil,
-                    note: 'Cache CDN (s-maxage) + cache memory + coalescing dipakai agar Instagram tidak rate-limit.'
+                    note: snapshot.degraded
+                        ? 'Mode degradasi: upstream diblokir, request dihentikan sementara (cooldown 5 menit) agar tidak menambah rate-limit.'
+                        : 'Cache CDN (s-maxage) + cache memory + coalescing + fallback proxy dipakai agar Instagram tidak rate-limit.'
                 },
                 unavailable_public_endpoints: [
                     'nomor telepon & email (tidak dipublikasikan)',
                     'daftar follower / following (butuh login)',
                     'story (butuh login atau subscription)',
                     'like/comment per akun (butuh login)',
-                    'bio & kategori tanpa web_profile_info (bisa kena cooldown 429)'
+                    'bio & kategori tanpa web_profile_info (bisa kena cooldown 429)',
+                    ...(snapshot.degraded
+                        ? ['semua statistik & media: IP server diblokir Instagram']
+                        : [])
                 ],
-                note: 'Data diambil dari halaman publik & endpoint web Instagram tanpa login.'
+                note: snapshot.degraded
+                    ? 'Field kosong sengaja tidak diisi agar tidak mengarang data.'
+                    : 'Data diambil dari halaman publik, fallback proxy baca publik, & endpoint web Instagram tanpa login.'
             },
             raw: {
                 og_meta: meta,
@@ -711,7 +810,9 @@ function buildSuccessBody(snapshot: Snapshot, input: HandlerInput) {
                             parseCompactNumber(ogCounts.posts_raw) === apiPostsCount
                     }
                 },
-                note: 'OG dipakai sebagai fallback bila web_profile_info gagal/429.'
+                note: snapshot.degraded
+                    ? 'Tidak ada cross-check karena upstream tidak bisa diakses dari server.'
+                    : 'OG (langsung atau proxy) dipakai sebagai fallback bila web_profile_info gagal/429.'
             },
             source: profileUrl
         }
