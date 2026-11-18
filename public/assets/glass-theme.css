@@ -41,6 +41,10 @@
   --secondary:var(--d2);
   --tertiary:var(--t1);
   --focus:var(--g1);
+  --scrollbar-thumb:var(--accent-strong);
+  --scrollbar-track:var(--surface);
+  scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width:thin;
   --danger:var(--d3);
   --success:var(--g1);
   --warning:var(--g3);
@@ -237,10 +241,13 @@ button,input{font:inherit}
 @keyframes glass-shine{to{background-position:-200% 0}}
 
 /* Scrollbar + selection */
-::-webkit-scrollbar{width:9px;height:9px}
-::-webkit-scrollbar-track{background:0 0}
-::-webkit-scrollbar-thumb{background:color-mix(in srgb, var(--accent) 55%, transparent);border-radius:999px}
-::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+@supports not (scrollbar-color:auto){
+  :root{scrollbar-width:auto}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:var(--scrollbar-track)}
+  ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:999px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+}
 ::selection{background:color-mix(in srgb, var(--accent) 40%, transparent);color:var(--text)}
 
 /* JS / Tailwind inline colour rewrites → palet KuroNeko */
