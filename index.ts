@@ -157,10 +157,11 @@ app.get('/stats/data', (req: Request, res: Response) => {
             server: {
                 platform: os.platform(),
                 arch: os.arch(),
-                // Detail host/CPU disamarkan: endpoint ini publik.
-                hostname: 'redacted',
+                // Hostname asli (IP internal) tidak dipublikasikan.
+                // UI "Platform" cukup menampilkan nama OS.
+                hostname: os.platform(),
                 uptime: formatUptime(os.uptime()),
-                node_version: 'v22.x',
+                node_version: process.version,
                 memory: {
                     total: formatBytes(totalMemory),
                     used: formatBytes(usedMemory),
@@ -168,8 +169,8 @@ app.get('/stats/data', (req: Request, res: Response) => {
                     percent: Math.round((usedMemory / totalMemory) * 100)
                 },
                 cpu: {
-                    model: 'Virtual CPU',
-                    speed: '0 MHz',
+                    model: cpus[0]?.model || 'Unknown',
+                    speed: `${cpus[0]?.speed || 0} MHz`,
                     cores: cpus.length,
                     load: os.loadavg()[0].toFixed(2)
                 }
