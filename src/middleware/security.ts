@@ -12,14 +12,17 @@ type Pattern = { name: string; re: RegExp };
 const ATTACK_PATTERNS: Pattern[] = [
     { name: 'sqli_tautology', re: /(['"]?\s*(?:or|and)\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?)/i },
     { name: 'sqli_union', re: /\bunion\b\s+(?:all\s+)?\bselect\b/i },
+    { name: 'sqli_union_obfuscated', re: /union[\s\S]{0,40}select/i },
     { name: 'sqli_timebased', re: /\b(?:sleep|benchmark|pg_sleep)\s*\(/i },
     { name: 'sqli_waitfor', re: /\bwaitfor\s+delay\b/i },
     { name: 'sqli_destructive', re: /;\s*(?:drop|delete|truncate|alter)\s+(?:table|database)?/i },
     { name: 'sqli_comment', re: /(?:--|\/\*)[\s\S]{0,40}\b(?:or|and)\b/i },
     { name: 'xss_script', re: /<\s*script\b/i },
     { name: 'xss_js_scheme', re: /javascript\s*:/i },
-    { name: 'xss_event', re: /\bon(?:error|load|click|focus|mouseover|mouseenter)\s*=/i },
+    { name: 'xss_event', re: /\bon(?:error|load|click|focus|mouseover|mouseenter|pagereveal|beforematch|toggle|pointerenter|pointerover|animationstart|transitionend)\s*=/i },
+    { name: 'xss_any_event', re: /\bon[a-z]{3,30}\s*=/i },
     { name: 'xss_element', re: /<\s*(?:iframe|object|embed|svg|img)\b[^>]*(?:\bon\w+\s*=|javascript\s*:)/i },
+    { name: 'xss_attr', re: /\b(?:srcdoc|formaction|xlink:href)\s*=/i },
     { name: 'xss_cookie', re: /document\s*\.\s*cookie/i },
     { name: 'path_traversal', re: /(?:\.\.[\\/]|%2e%2e(?:%2f|%5c|%2f))/i },
     { name: 'sensitive_file', re: /(?:\/etc\/passwd|\\windows\\win\.ini|\bwin\.ini\b|\bboot\.ini\b)/i },
@@ -27,7 +30,9 @@ const ATTACK_PATTERNS: Pattern[] = [
     { name: 'nosql_operator', re: /\$(?:where|ne|gt|gte|lt|lte|regex|expr)\b/i },
     { name: 'prototype_pollution', re: /__proto__|constructor\s*\[\s*['"]prototype|\bprototype\s*\[/i },
     { name: 'log4shell', re: /\$\{jndi:/i },
+    { name: 'log4shell_obfuscated', re: /\$\{[^}]{0,80}(?:lower|upper|jndi|env)[^}]{0,80}\}/i },
     { name: 'template_injection', re: /(?:<%=|<%#|\{\{[^}]{0,120}(?:\$\{|process\.env|constructor)[^}]{0,120}\}\})/i },
+    { name: 'ssti_arithmetic', re: /(?:\{\{\s*\d+\s*[*+]\s*\d+\s*\}\}|\$\{\s*\d+\s*[*+]\s*\d+\s*\})/ },
     { name: 'null_byte', re: /\u0000/ }
 ];
 
@@ -90,6 +95,15 @@ const decodeLayers = (value: string): string[] => {
     return layers;
 };
 
+// SQLi modern sering menyisipkan comment / whitespace aneh di tengah keyword.
+// Normalisasi ini bikin "un/**/ion/**/select" tetap terbaca sebagai "unionselect".
+const normalizeSql = (value: string): string =>
+    value
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(?:--|#)[^\r\n]*/g, '')
+        .replace(/[\u000b\u000c\u00a0]+/g, ' ')
+        .toLowerCase();
+
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -117,7 +131,9 @@ const checkString = (
 
     if (skipPatterns) return null;
 
-    for (const haystack of decodeLayers(value)) {
+    const layers = decodeLayers(value);
+    const haystacks = [...layers, ...layers.map(normalizeSql)];
+    for (const haystack of haystacks) {
         for (const pattern of ATTACK_PATTERNS) {
             if (pattern.re.test(haystack)) return pattern.name;
         }
